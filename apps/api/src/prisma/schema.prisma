@@ -49,7 +49,12 @@ model User {
   problems  Problem[]
   votes     Vote[]
   comments  Comment[]
-  createdAt DateTime  @default(now())
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  // Nomes de tabela/coluna em snake_case (padrão Postgres) via @@map/@map —
+  // o client do Prisma continua expondo os campos em camelCase no código
+  // (ex.: user.createdAt), só a coluna física no banco muda.
+  @@map("users")
 }
 
 model Category {
@@ -59,6 +64,8 @@ model Category {
   id       String    @id @default(uuid())
   name     String    @unique
   problems Problem[]
+
+  @@map("categories")
 }
 
 model Problem {
@@ -69,46 +76,51 @@ model Problem {
   longitude   Float
   status      ProblemStatus @default(ABERTO)
 
-  categoryId String
+  categoryId String   @map("category_id")
   category   Category @relation(fields: [categoryId], references: [id])
 
-  authorId String
+  authorId String @map("author_id")
   author   User   @relation(fields: [authorId], references: [id])
 
   votes    Vote[]
   comments Comment[]
 
   // Confirmação de resolução — só o autor original pode marcar.
-  resolvedAt       DateTime?
-  resolutionRating Int? // satisfação do autor com a solução, escala 1–5
+  resolvedAt       DateTime? @map("resolved_at")
+  resolutionRating Int?      @map("resolution_rating") // satisfação do autor com a solução, escala 1–5
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("problems")
 }
 
 model Vote {
   id String @id @default(uuid())
 
-  problemId String
+  problemId String  @map("problem_id")
   problem   Problem @relation(fields: [problemId], references: [id])
 
-  userId String
+  userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id])
 
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([problemId, userId]) // um voto por cidadão por problema
+  @@map("votes")
 }
 
 model Comment {
   id String @id @default(uuid())
 
-  problemId String
+  problemId String  @map("problem_id")
   problem   Problem @relation(fields: [problemId], references: [id])
 
-  userId String
+  userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id])
 
   text      String
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("comments")
 }
