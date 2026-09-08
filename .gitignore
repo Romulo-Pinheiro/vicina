@@ -1,0 +1,19 @@
+# Ambiente
+.env
+.env.local
+
+# Dependências e build (Nest e Vite geram tudo isso)
+node_modules/
+dist/
+build/
+
+# Cache e artefatos temporários
+*.tsbuildinfo
+coverage/
+*.log
+
+# Editor / SO
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
