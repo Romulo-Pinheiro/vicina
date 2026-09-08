@@ -17,6 +17,7 @@ O código produzido aqui alimenta diretamente a Seção 4 (Apresentação da Sol
 - **Mapa:** Leaflet + react-leaflet, com tiles do OpenStreetMap — não Google Maps nem Mapbox. Critério: custo zero, sem exigência de chave de API ou cartão de crédito cadastrado (mesma lógica de custo-zero que motivou trocar AWS por Vercel/Render).
 - **Categorias de problema:** taxonomia restrita a temas de esfera municipal (infraestrutura urbana, iluminação pública, limpeza urbana, transporte municipal, mobilidade, segurança pública local). Não há classificação automática por esfera administrativa (municipal/estadual/federal) — problemas fora da alçada municipal são triados manualmente pelo gestor, como já ocorre em canais de ouvidoria.
 - **Contas de gestor:** provisionadas manualmente pelo administrador do sistema (seed/script), sem rota de autocadastro público — a concessão do papel `GESTOR` pressupõe vínculo institucional que está fora do escopo técnico do protótipo.
+- **Sessão/JWT:** token de acesso único, expiração de 7 dias, sem fluxo de refresh token nem blocklist de revogação antecipada. Trade-off deliberado de escopo de protótipo (ver "simplicidade sobre generalização" abaixo); revogação de sessão fica como trabalho futuro caso o protótipo evolua para produção.
 
 ## Stack
 
