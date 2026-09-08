@@ -1,0 +1,114 @@
+// schema.prisma — Plataforma Digital Colaborativa para Participação Cidadã
+//
+// Decisões refletidas aqui (ver CLAUDE.md para o histórico completo):
+// - Prisma como ORM (familiaridade prévia do autor com NestJS + PostgreSQL).
+// - Papel GESTOR existe no modelo, mas contas desse tipo são provisionadas
+//   manualmente (seed/admin) — não há fluxo de autocadastro para esse papel.
+// - Categoria restrita a temas de esfera municipal (ver CLAUDE.md).
+// - Confirmação de resolução é feita apenas pelo autor original do problema,
+//   para evitar a questão de "quem tem autoridade para dizer que foi resolvido".
+// - Arquivo vive em src/prisma/ (não na raiz do projeto) conforme a estrutura
+//   de pastas definida em CLAUDE.md — o path é declarado no campo
+//   "prisma.schema" do package.json para o Prisma CLI encontrá-lo.
+//
+// NÃO implementado aqui (trabalho futuro, ver Seção 6 do artigo):
+// - Status "sem atividade" por inatividade (X dias sem voto/comentário/atualização).
+//   Quando for implementado, usar um campo calculado ou um job agendado que
+//   consulta o `updatedAt` mais recente entre Problem/Vote/Comment — NÃO expirar
+//   ou apagar o registro, apenas sinalizar visualmente (ver discussão no chat
+//   sobre por que "expirar e sumir" contradiz o objetivo de transparência).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7: a connection string não vai mais aqui — fica em datasource.url no
+// prisma7.config.ts (usada por Migrate/Studio) e é passada explicitamente via
+// driver adapter (@prisma/adapter-pg) ao instanciar o PrismaClient em runtime
+// (ver src/prisma/prisma.service.ts). Ver https://pris.ly/d/prisma7-client-config.
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CIDADAO
+  GESTOR
+}
+
+enum ProblemStatus {
+  ABERTO
+  RESOLVIDO
+}
+
+model User {
+  id        String    @id @default(uuid())
+  name      String
+  email     String    @unique
+  password  String
+  role      Role      @default(CIDADAO)
+  problems  Problem[]
+  votes     Vote[]
+  comments  Comment[]
+  createdAt DateTime  @default(now())
+}
+
+model Category {
+  // Taxonomia restrita a temas de competência municipal — ver CLAUDE.md.
+  // Seed inicial sugerido: Infraestrutura urbana, Iluminação pública,
+  // Limpeza urbana, Transporte municipal, Mobilidade, Segurança pública local.
+  id       String    @id @default(uuid())
+  name     String    @unique
+  problems Problem[]
+}
+
+model Problem {
+  id          String        @id @default(uuid())
+  title       String
+  description String
+  latitude    Float
+  longitude   Float
+  status      ProblemStatus @default(ABERTO)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  votes    Vote[]
+  comments Comment[]
+
+  // Confirmação de resolução — só o autor original pode marcar.
+  resolvedAt       DateTime?
+  resolutionRating Int? // satisfação do autor com a solução, escala 1–5
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Vote {
+  id String @id @default(uuid())
+
+  problemId String
+  problem   Problem @relation(fields: [problemId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([problemId, userId]) // um voto por cidadão por problema
+}
+
+model Comment {
+  id String @id @default(uuid())
+
+  problemId String
+  problem   Problem @relation(fields: [problemId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  text      String
+  createdAt DateTime @default(now())
+}
