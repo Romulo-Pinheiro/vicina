@@ -17,4 +17,10 @@ export default defineConfig({
   datasource: {
     url: env('DATABASE_URL'),
   },
+  migrations: {
+    // Roda depois de `prisma migrate dev`/`deploy` (ou sob demanda via
+    // `prisma db seed`) para garantir as categorias municipais do Problem —
+    // idempotente (upsert por nome), seguro de rodar mais de uma vez.
+    seed: 'ts-node src/prisma/seed.ts',
+  },
 });
