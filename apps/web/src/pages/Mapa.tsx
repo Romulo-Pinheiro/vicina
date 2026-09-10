@@ -35,10 +35,10 @@ import { ApiError } from '../services/apiClient';
 import { listCategories, type Category } from '../services/categoriesService';
 import { createProblem, listProblems, type Problem } from '../services/problemsService';
 
-// Coordenadas provisórias (Recife, PE) usadas só quando ainda não há nenhum
-// problema cadastrado (sem pontos pra calcular bounds) — ajustar pro centro
-// da cidade-piloto quando a validação empírica (ver CLAUDE.md) a definir.
-const FALLBACK_CENTER: [number, number] = [-8.0522, -34.9286];
+// Centro de Feira de Santana, BA — cidade-piloto definida para a validação
+// empírica (ver CLAUDE.md). Usado só quando ainda não há nenhum problema
+// cadastrado (sem pontos pra calcular bounds via FitBounds).
+const FALLBACK_CENTER: [number, number] = [-12.2597, -38.9647];
 const FALLBACK_ZOOM = 13;
 
 const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
