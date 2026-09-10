@@ -6,10 +6,12 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
-// Expiração do token: 7 dias. Sem fluxo de refresh token nem blocklist de
-// revogação — trade-off deliberado de escopo de protótipo (ver CLAUDE.md,
-// "simplicidade sobre generalização"); revogação antecipada de sessão fica
-// como trabalho futuro caso o protótipo evolua para produção.
+// Expiração do token: 7 dias — precisa ficar em sincronia com
+// ACCESS_TOKEN_COOKIE_MAX_AGE_MS em ./constants.ts (o cookie que carrega o
+// token é setado em auth.controller.ts). Sem fluxo de refresh token nem
+// blocklist de revogação — trade-off deliberado de escopo de protótipo (ver
+// CLAUDE.md, "simplicidade sobre generalização"); revogação antecipada de
+// sessão fica como trabalho futuro caso o protótipo evolua para produção.
 const JWT_EXPIRES_IN = '7d';
 
 @Module({

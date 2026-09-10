@@ -1,9 +1,19 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
+import type { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { AuthService, SanitizedUser } from '../auth.service';
+import { ACCESS_TOKEN_COOKIE } from '../constants';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
+
+// Lê o JWT do cookie httpOnly setado por AuthController (em vez do header
+// Authorization: Bearer) — exige cookie-parser registrado em main.ts pra
+// req.cookies existir.
+function extractTokenFromCookie(req: Request): string | null {
+  const token: unknown = req.cookies?.[ACCESS_TOKEN_COOKIE];
+  return typeof token === 'string' ? token : null;
+}
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -23,7 +33,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       );
     }
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([extractTokenFromCookie]),
       ignoreExpiration: false,
       secretOrKey: secret,
     });
