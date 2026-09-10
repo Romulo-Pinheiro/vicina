@@ -1,25 +1,15 @@
 // Cliente HTTP fino sobre fetch — evita a dependência extra do axios pra algo
 // que o fetch nativo já resolve bem (menos peso de bundle, mesmo critério de
-// custo zero do resto do projeto). Ponto único que sabe montar a URL da API
-// e anexar o JWT em toda chamada autenticada.
+// custo zero do resto do projeto).
+//
+// Autenticação via cookie httpOnly (ver apps/api AuthController), não mais
+// localStorage: o token nunca fica acessível a este código (só o navegador
+// lida com ele), então não há nada pra ler/anexar aqui — só credentials:
+// 'include' pra o fetch enviar/aceitar o cookie em toda chamada.
 
 // Vazio em dev: o proxy do vite.config.ts encaminha /api/* pra API local.
 // Só é preenchido apontando pra uma API remota (ex.: Render em produção).
 const API_URL = import.meta.env.VITE_API_URL ?? '';
-
-const TOKEN_STORAGE_KEY = 'vicina:token';
-
-export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_STORAGE_KEY);
-}
-
-export function setToken(token: string): void {
-  localStorage.setItem(TOKEN_STORAGE_KEY, token);
-}
-
-export function clearToken(): void {
-  localStorage.removeItem(TOKEN_STORAGE_KEY);
-}
 
 export class ApiError extends Error {
   constructor(
@@ -47,17 +37,17 @@ export async function apiFetch<T>(
   const headers = new Headers(options.headers);
   headers.set('Content-Type', 'application/json');
 
-  const token = getToken();
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
-
   const response = await fetch(`${API_URL}/api${path}`, {
     ...options,
     headers,
+    // Necessário mesmo em dev (front e back same-origin via proxy do Vite) e
+    // essencial em produção caso front/back não sejam same-origin do ponto
+    // de vista do navegador — sem isso o cookie httpOnly do JWT nunca é
+    // enviado nem aceito.
+    credentials: 'include',
   });
 
-  // 204 (ex.: DELETE /votes/:problemId, DELETE /comments/:id) não tem corpo.
+  // 204 (ex.: DELETE /votes/:problemId, POST /auth/logout) não tem corpo.
   if (response.status === NO_CONTENT_STATUS) {
     return undefined as T;
   }
@@ -79,7 +69,7 @@ export function apiGet<T>(path: string): Promise<T> {
   return apiFetch<T>(path);
 }
 
-export function apiPost<T>(path: string, data?: unknown): Promise<T> {
+export function apiPost<T = void>(path: string, data?: unknown): Promise<T> {
   return apiFetch<T>(path, {
     method: 'POST',
     body: data === undefined ? undefined : JSON.stringify(data),
