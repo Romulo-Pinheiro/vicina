@@ -12,6 +12,11 @@ build/
 coverage/
 *.log
 
+# tsconfig.node.json (apps/web) não define outDir — "tsc -b" emite o JS
+# compilado ao lado do vite.config.ts em vez de numa pasta de build.
+apps/web/vite.config.js
+apps/web/vite.config.d.ts
+
 # Editor / SO
 .vscode/*
 !.vscode/extensions.json
