@@ -44,6 +44,16 @@ export class VotesService {
     }
   }
 
+  // Necessário pro frontend saber o estado do botão de votar (já votou ou
+  // não) sem precisar tentar criar o voto e interpretar um eventual 409.
+  async hasVoted(problemId: string, userId: string): Promise<boolean> {
+    const vote = await this.prisma.vote.findUnique({
+      where: { problemId_userId: { problemId, userId } },
+      select: { id: true },
+    });
+    return vote !== null;
+  }
+
   async remove(problemId: string, userId: string): Promise<void> {
     try {
       await this.prisma.vote.delete({

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   HttpCode,
   HttpStatus,
   Param,
@@ -26,6 +27,17 @@ export class VotesController {
   @Post()
   create(@Body() dto: CreateVoteDto, @CurrentUser() user: SanitizedUser) {
     return this.votesService.create(dto.problemId, user.id);
+  }
+
+  // Estado do voto do usuário atual pra um problema — usado pela página
+  // DetalheProblema pra saber se mostra "Votar" ou "Remover voto".
+  @Get(':problemId')
+  async findMine(
+    @Param('problemId', ParseUUIDPipe) problemId: string,
+    @CurrentUser() user: SanitizedUser,
+  ): Promise<{ voted: boolean }> {
+    const voted = await this.votesService.hasVoted(problemId, user.id);
+    return { voted };
   }
 
   @Delete(':problemId')
