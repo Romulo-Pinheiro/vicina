@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -188,6 +188,14 @@ export function Mapa() {
                 <Typography variant="caption" color="text.secondary">
                   {problem._count.votes} voto(s) · {problem._count.comments} comentário(s)
                 </Typography>
+                <Button
+                  component={RouterLink}
+                  to={`/problemas/${problem.id}`}
+                  size="small"
+                  sx={{ alignSelf: 'flex-start', px: 0 }}
+                >
+                  Ver detalhes
+                </Button>
               </Stack>
             </Popup>
           </Marker>

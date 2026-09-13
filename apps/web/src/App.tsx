@@ -6,19 +6,20 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { Link as RouterLink, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext';
+import { DetalheProblema } from './pages/DetalheProblema';
 import { Login } from './pages/Login';
 import { Mapa } from './pages/Mapa';
 
-// Shell de rotas do app. DetalheProblema e PainelGestor entram como rotas
-// próprias em src/pages/ conforme forem implementados (ver estrutura de
-// pastas em CLAUDE.md); não criadas ainda como arquivos vazios para não
-// deixar stubs no repositório.
+// Shell de rotas do app. PainelGestor entra como rota própria em src/pages/
+// quando for implementado (ver estrutura de pastas em CLAUDE.md); não criado
+// ainda como arquivo vazio para não deixar stub no repositório.
 export function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/mapa" element={<Mapa />} />
+      <Route path="/problemas/:id" element={<DetalheProblema />} />
     </Routes>
   );
 }

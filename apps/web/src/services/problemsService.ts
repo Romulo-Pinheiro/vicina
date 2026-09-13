@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from './apiClient';
+import { apiGet, apiPatch, apiPost } from './apiClient';
 
 export type ProblemStatus = 'ABERTO' | 'RESOLVIDO';
 
@@ -36,4 +36,21 @@ export function listProblems(): Promise<Problem[]> {
 // (credentials: 'include'); se não houver sessão válida, a API responde 401.
 export function createProblem(data: CreateProblemInput): Promise<Problem> {
   return apiPost<Problem>('/problems', data);
+}
+
+// Público — usado pela página DetalheProblema.
+export function getProblem(id: string): Promise<Problem> {
+  return apiGet<Problem>(`/problems/${id}`);
+}
+
+export interface ResolveProblemInput {
+  resolutionRating?: number;
+}
+
+// Exige sessão e, no backend, ser o autor original (403 caso contrário).
+export function resolveProblem(
+  id: string,
+  data: ResolveProblemInput,
+): Promise<Problem> {
+  return apiPatch<Problem>(`/problems/${id}/resolve`, data);
 }
