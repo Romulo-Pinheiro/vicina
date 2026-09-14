@@ -21,6 +21,8 @@ O código produzido aqui alimenta diretamente a Seção 4 (Apresentação da Sol
 - **Front/back same-origin via proxy de rewrite:** frontend (Vercel) e backend (Render) ficam em domínios diferentes, o que quebraria cookies cross-site em parte dos navegadores (restrições de terceiros, especialmente Safari). Solução: `vercel.json` com `rewrites` de `/api/:path*` para a URL do backend no Render, fazendo o navegador enxergar tudo como um único domínio — mesmo padrão do proxy `/api` já usado no Vite em dev. Evita `SameSite=None`, simplifica CORS, e reduz superfície de CSRF.
 - **Acesso a `Problem`:** leitura (listagem e detalhe) é pública, sem exigir login — a transparência do mapa vale antes mesmo do visitante criar conta. Escrita (criar, resolver) exige autenticação. Listagem padrão ordenada por número de votos (não por data), refletindo a priorização colaborativa que sustenta a proposta teórica do trabalho.
 - **Cidade-piloto da validação empírica:** Feira de Santana, BA (coordenadas do centro: -12.2597, -38.9647) — usada como centro padrão do mapa quando não há nenhum problema cadastrado ainda (fallback de `fitBounds`). Coerente com o recrutamento por conveniência já decidido para a Etapa 4 da metodologia.
+- **Banco de dados hospedado no Neon, não no Render:** o Postgres gratuito do Render expira 30 dias após a criação (14 dias de carência antes de apagar os dados) — inviável para um projeto que precisa sobreviver ao período de testes, à defesa e à vida pós-TCC no portfólio. Neon tem free tier permanente (sem expiração), com o banco hibernando quando ocioso e voltando sozinho na próxima conexão. O serviço web da API continua no Render normalmente — só o banco muda de provedor.
+- **Cold start do Render (backend) é uma limitação aceita, não um bug:** serviços gratuitos hibernam após ~15 min de inatividade e levam até ~50s pra responder na primeira requisição depois disso. Isso vai aparecer no teste com cidadãos (primeiro acesso pode demorar) — vale documentar como limitação percebida na Seção 5 do artigo, no mesmo espírito da latência relatada no DevPrep.
 
 ## Stack
 
@@ -30,7 +32,7 @@ O código produzido aqui alimenta diretamente a Seção 4 (Apresentação da Sol
 | Mapa | Leaflet + react-leaflet (tiles OpenStreetMap) |
 | Backend | NestJS |
 | ORM | Prisma **v7 (fixar a major — não usar v8, ainda em Release Candidate com CLI totalmente reformulada: `migrate dev` não existe mais na v8, virou `db migrate` + `migration`)** |
-| Banco de dados | PostgreSQL (extensão PostGIS a avaliar, se necessário para consultas geoespaciais) |
+| Banco de dados | PostgreSQL, hospedado no **Neon** (não Render) — free tier permanente, sem expiração; ver decisão abaixo |
 | Containerização (dev local) | Docker / docker-compose |
 | Hospedagem — frontend | Vercel |
 | Hospedagem — backend | Render |
