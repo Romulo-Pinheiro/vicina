@@ -1,0 +1,31 @@
+# Blueprint do Render pro backend (apps/api) — ver CLAUDE.md, "Decisões já
+# tomadas" (Vercel + Render, custo zero). Plano free: hiberna após ~15min de
+# inatividade e leva até ~50s pra responder na primeira requisição depois
+# disso (cold start) — limitação aceita, não bug, documentada na Seção 5 do
+# artigo.
+#
+# Ambiente Node nativo (não Docker) — mais simples de mapear pro monorepo via
+# rootDir, e o buildCommand abaixo cobre tudo que o Dockerfile já fazia
+# manualmente em multi-stage.
+services:
+  - type: web
+    name: vicina-api
+    runtime: node
+    plan: free
+    rootDir: apps/api
+    # migrate deploy, não migrate dev: aplica migrations já commitadas sem
+    # gerar novas nem pedir confirmação interativa — migrate dev é só pra
+    # desenvolvimento local (ver CLAUDE.md, "Comandos úteis").
+    buildCommand: npm install && npx prisma generate && npx prisma migrate deploy && npm run build
+    startCommand: npm run start:prod
+    envVars:
+      # Segredos — nunca em texto plano no repositório (é público). Preenchidos
+      # manualmente no painel do Render após a criação do serviço.
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: NODE_ENV
+        value: production
