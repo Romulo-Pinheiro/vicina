@@ -9,10 +9,9 @@ import { useAuth } from './auth/AuthContext';
 import { DetalheProblema } from './pages/DetalheProblema';
 import { Login } from './pages/Login';
 import { Mapa } from './pages/Mapa';
+import { PainelGestor } from './pages/PainelGestor';
 
-// Shell de rotas do app. PainelGestor entra como rota própria em src/pages/
-// quando for implementado (ver estrutura de pastas em CLAUDE.md); não criado
-// ainda como arquivo vazio para não deixar stub no repositório.
+// Shell de rotas do app.
 export function App() {
   return (
     <Routes>
@@ -20,6 +19,7 @@ export function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/mapa" element={<Mapa />} />
       <Route path="/problemas/:id" element={<DetalheProblema />} />
+      <Route path="/painel-gestor" element={<PainelGestor />} />
     </Routes>
   );
 }
@@ -50,6 +50,11 @@ function Home() {
                 <Button component={RouterLink} to="/mapa" variant="contained">
                   Ver mapa
                 </Button>
+                {user.role === 'GESTOR' && (
+                  <Button component={RouterLink} to="/painel-gestor" variant="outlined">
+                    Painel do gestor
+                  </Button>
+                )}
                 <Button variant="outlined" onClick={() => void logout()}>
                   Sair
                 </Button>
