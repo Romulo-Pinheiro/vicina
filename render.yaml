@@ -22,7 +22,11 @@ services:
     # `nest build` (chamado por `npm run build`) precisa pra existir. A flag
     # força a instalação delas só durante o build; NODE_ENV=production
     # continua valendo no runtime (start:prod), sem afetar o pacote final.
-    buildCommand: npm install --include=dev && npx prisma generate && npx prisma migrate deploy && npm run build
+    #
+    # prisma db seed ao final: seguro rodar em todo deploy porque seed.ts usa
+    # upsert em tudo (categorias e conta de gestor) — idempotente, não
+    # duplica nem falha em execuções repetidas.
+    buildCommand: npm install --include=dev && npx prisma generate && npx prisma migrate deploy && npm run build && npx prisma db seed
     startCommand: npm run start:prod
     envVars:
       # Segredos — nunca em texto plano no repositório (é público). Preenchidos
@@ -32,6 +36,15 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: FRONTEND_URL
+        sync: false
+      # Credenciais da conta de gestor criada pelo seed (ver apps/api/src/prisma/seed.ts
+      # e apps/api/.env.example) — preencher manualmente no painel com um email e
+      # uma senha reais de produção. NUNCA usar aqui o valor padrão do
+      # .env.example (gestor@vicina.local / gestorSenha123): esse par só serve
+      # pra desenvolvimento local e é público neste repositório.
+      - key: SEED_GESTOR_EMAIL
+        sync: false
+      - key: SEED_GESTOR_PASSWORD
         sync: false
       - key: NODE_ENV
         value: production
