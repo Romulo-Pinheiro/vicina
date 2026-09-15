@@ -85,7 +85,7 @@ vicina/
 
 Não adicionar entidades além dessas sem necessidade concreta identificada durante o desenvolvimento — escopo de protótipo, não de produto.
 
-**Confirmação de resolução:** apenas o autor original do `Problem` pode marcar como `RESOLVIDO` e opcionalmente avaliar a solução (`resolutionRating`, 1–5). Não implementar confirmação por terceiros/votação de resolução — decisão deliberada para evitar ambiguidade de autoridade.
+**Confirmação de resolução:** apenas o autor original do `Problem` pode marcar como `RESOLVIDO` e opcionalmente avaliar a solução (`resolutionRating`, 1–5). Não implementar confirmação por terceiros/votação de resolução — decisão deliberada para evitar ambiguidade de autoridade. **Extensão planejada (ver "Melhorias possíveis" item 8, ainda não implementada):** gestor também poderá marcar como resolvido, sem pedir `resolutionRating` nesse caso — a regra do autor original continua valendo em paralelo, não é substituída.
 
 **Trabalho futuro (não implementar agora):** status "sem atividade" para problemas sem voto/comentário/atualização há X dias. Quando chegar a hora, isso é sinalização visual (ex.: item acinzentado, fora do destaque padrão do mapa), nunca expiração/exclusão do registro — apagar dados por tempo contradiz o objetivo de transparência que sustenta a proposta (ver Pinho, 2008, na fundamentação teórica do artigo). Só entra em pauta depois do deploy pós-TCC.
 
@@ -129,4 +129,6 @@ Ordem de prioridade combinada (cada item facilita o próximo):
 5. Polimento visual do `PainelGestor` (tipografia, espaçamento, gráfico simples) — sem adicionar ações/funcionalidade nova.
 6. Dashboard público de uma cidade só (ver decisão acima).
 7. Checagem de responsividade mobile (Fab, dialog de registro, mapa) — maioria dos cidadãos vai testar pelo celular.
-8. Upload de foto no registro do problema (ver decisão acima) — **corte obrigatório**: se não estiver pronto quando chegar a data de recrutamento dos participantes, descartar; não pode atrasar o teste com cidadãos.
+8. **Gestor também pode marcar problema como resolvido** (além do autor original — não substitui, adiciona). Avaliação de satisfação (1–5) continua exclusiva de quando é o autor confirmando; gestor resolvendo não pede nota. Ajustar a regra de autorização no endpoint de resolução existente.
+9. **Repensar o fluxo de adicionar problema no mapa** — atual (Fab → aviso → clique no mapa → dialog) depende de o usuário lembrar do aviso entre dois cliques desconectados. Direção proposta a validar antes de implementar: pin arrastável aparecendo imediatamente ao clicar no Fab (centralizado no mapa ou na geolocalização do usuário, se permitida), confirmação após arrastar até o ponto exato — sem clique intermediário "no escuro".
+10. Upload de foto no registro do problema (ver decisão acima) — **corte obrigatório**: se não estiver pronto quando chegar a data de recrutamento dos participantes, descartar; não pode atrasar o teste com cidadãos.
