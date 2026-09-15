@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type SyntheticEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -18,8 +18,13 @@ type Mode = 'login' | 'register';
 export function Login() {
   const { login, register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const [mode, setMode] = useState<Mode>('login');
+  // O CTA "Criar conta" da Home aponta pra /login?mode=register — sem isso,
+  // ele cairia na aba "Entrar" e o clique pareceria não ter feito nada.
+  const [mode, setMode] = useState<Mode>(
+    searchParams.get('mode') === 'register' ? 'register' : 'login',
+  );
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

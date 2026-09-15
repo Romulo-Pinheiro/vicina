@@ -12,17 +12,15 @@ import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import { styled } from '@mui/material/styles';
 import { useAuth } from '../auth/AuthContext';
-
-// Cores da identidade visual do Vicina (ver docs/Vicina_Identidade_Visual.html).
-// Ficam aqui, e não no theme.ts, porque a Ardósia é uma superfície exclusiva
-// desta barra — o resto do app é sempre sobre Papel (ver theme.ts).
-const ARDOSIA = '#232B2B';
-const ARDOSIA_PROFUNDA = '#171D1D';
-const SINAL = '#FF6B35';
-const SINAL_CLARA = '#FF8F63';
-const SINAL_ESCURA = '#C44F22';
-const PAPEL = '#FAFAF8';
-const NAV_INATIVO = '#9AA3A3';
+import {
+  ARDOSIA,
+  ARDOSIA_PROFUNDA,
+  NAV_INATIVO,
+  PAPEL,
+  SINAL,
+  SINAL_CLARA,
+  SINAL_ESCURA,
+} from '../identityColors';
 
 // react-router acrescenta a classe "active" sozinho quando a rota do link
 // bate com a URL atual (mesmo passando um className string fixo) — por
