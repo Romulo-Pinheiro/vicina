@@ -1,0 +1,12 @@
+// Configuração de mapa compartilhada entre o Mapa real (pages/Mapa.tsx) e a
+// ilustração de mapa da Home (pages/Home.tsx) — mesma cidade-piloto, mesmo
+// provedor de tiles, um só lugar pra atualizar se algum dia mudar.
+
+// Centro de Feira de Santana, BA — cidade-piloto definida para a validação
+// empírica (ver CLAUDE.md).
+export const FALLBACK_CENTER: [number, number] = [-12.2597, -38.9647];
+export const FALLBACK_ZOOM = 13;
+
+export const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+export const OSM_ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';

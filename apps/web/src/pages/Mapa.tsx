@@ -31,19 +31,14 @@ import {
 import 'leaflet/dist/leaflet.css';
 import '../leaflet-icon-fix';
 import { useAuth } from '../auth/AuthContext';
+import { FALLBACK_CENTER, FALLBACK_ZOOM, OSM_ATTRIBUTION, OSM_TILE_URL } from '../mapConfig';
 import { ApiError } from '../services/apiClient';
 import { listCategories, type Category } from '../services/categoriesService';
 import { createProblem, listProblems, type Problem } from '../services/problemsService';
 
-// Centro de Feira de Santana, BA — cidade-piloto definida para a validação
-// empírica (ver CLAUDE.md). Usado só quando ainda não há nenhum problema
-// cadastrado (sem pontos pra calcular bounds via FitBounds).
-const FALLBACK_CENTER: [number, number] = [-12.2597, -38.9647];
-const FALLBACK_ZOOM = 13;
-
-const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const OSM_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+// FALLBACK_CENTER (Feira de Santana, BA — cidade-piloto, ver CLAUDE.md) é
+// usado só quando ainda não há nenhum problema cadastrado (sem pontos pra
+// calcular bounds via FitBounds).
 
 export function Mapa() {
   const { user } = useAuth();
