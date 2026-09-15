@@ -31,7 +31,9 @@ import {
 import 'leaflet/dist/leaflet.css';
 import '../leaflet-icon-fix';
 import { useAuth } from '../auth/AuthContext';
+import { getCategoryIcon } from '../categoryIcons';
 import { FALLBACK_CENTER, FALLBACK_ZOOM, OSM_ATTRIBUTION, OSM_TILE_URL } from '../mapConfig';
+import { getPinIcon } from '../mapPinIcon';
 import { ApiError } from '../services/apiClient';
 import { listCategories, type Category } from '../services/categoriesService';
 import { createProblem, listProblems, type Problem } from '../services/problemsService';
@@ -167,37 +169,48 @@ export function Mapa() {
         <FitBounds problems={problems} />
         <MapClickHandler active={placing} onMapClick={handleMapClick} />
 
-        {problems.map((problem) => (
-          <Marker key={problem.id} position={[problem.latitude, problem.longitude]}>
-            <Popup>
-              <Stack spacing={0.5} sx={{ minWidth: 200 }}>
-                <Typography variant="subtitle2">{problem.title}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {problem.description}
-                </Typography>
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
-                  <Chip label={problem.category.name} size="small" />
-                  <Chip
-                    label={problem.status === 'ABERTO' ? 'Aberto' : 'Resolvido'}
+        {problems.map((problem) => {
+          const CategoryIcon = getCategoryIcon(problem.category.name);
+          return (
+            <Marker
+              key={problem.id}
+              position={[problem.latitude, problem.longitude]}
+              icon={getPinIcon(problem.status, problem.category.name)}
+            >
+              <Popup>
+                <Stack spacing={0.5} sx={{ minWidth: 200 }}>
+                  <Typography variant="subtitle2">{problem.title}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {problem.description}
+                  </Typography>
+                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
+                    <Chip
+                      icon={<CategoryIcon fontSize="small" />}
+                      label={problem.category.name}
+                      size="small"
+                    />
+                    <Chip
+                      label={problem.status === 'ABERTO' ? 'Aberto' : 'Resolvido'}
+                      size="small"
+                      color={problem.status === 'ABERTO' ? 'warning' : 'success'}
+                    />
+                  </Stack>
+                  <Typography variant="caption" color="text.secondary">
+                    {problem._count.votes} voto(s) · {problem._count.comments} comentário(s)
+                  </Typography>
+                  <Button
+                    component={RouterLink}
+                    to={`/problemas/${problem.id}`}
                     size="small"
-                    color={problem.status === 'ABERTO' ? 'warning' : 'success'}
-                  />
+                    sx={{ alignSelf: 'flex-start', px: 0 }}
+                  >
+                    Ver detalhes
+                  </Button>
                 </Stack>
-                <Typography variant="caption" color="text.secondary">
-                  {problem._count.votes} voto(s) · {problem._count.comments} comentário(s)
-                </Typography>
-                <Button
-                  component={RouterLink}
-                  to={`/problemas/${problem.id}`}
-                  size="small"
-                  sx={{ alignSelf: 'flex-start', px: 0 }}
-                >
-                  Ver detalhes
-                </Button>
-              </Stack>
-            </Popup>
-          </Marker>
-        ))}
+              </Popup>
+            </Marker>
+          );
+        })}
 
         {pendingLocation && (
           <Marker position={pendingLocation}>
