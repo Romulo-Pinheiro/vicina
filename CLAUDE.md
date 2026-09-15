@@ -2,6 +2,8 @@
 
 Este arquivo orienta o Claude Code durante o desenvolvimento do protótipo do TCC. Leia antes de qualquer alteração.
 
+**Identidade visual:** `docs/identidade-visual.html` — paleta (Sinalização/Ardósia/Papel), símbolos (V sólido, Pin com V, com os `path` SVG exatos), tipografia (Instrument Serif + IBM Plex Sans/Mono) e componentes de referência. Ler esse arquivo antes de implementar qualquer peça de UI nova — usar os valores exatos de lá, não aproximar.
+
 ## Contexto do projeto
 
 TCC de Engenharia de Software (UNIFAN), formato **Artigo científico**. Protótipo funcional de uma plataforma onde cidadãos registram problemas urbanos em um mapa, comentam, votam e acompanham a priorização das demandas. Autor: Romulo Emanuel Pinheiro de Jesus. Prazo de entrega: fim de novembro de 2026.
@@ -18,8 +20,11 @@ O código produzido aqui alimenta diretamente a Seção 4 (Apresentação da Sol
 - **Categorias de problema:** taxonomia restrita a temas de esfera municipal (infraestrutura urbana, iluminação pública, limpeza urbana, transporte municipal, mobilidade, segurança pública local). Não há classificação automática por esfera administrativa (municipal/estadual/federal) — problemas fora da alçada municipal são triados manualmente pelo gestor, como já ocorre em canais de ouvidoria.
 - **Contas de gestor:** provisionadas manualmente pelo administrador do sistema (seed/script), sem rota de autocadastro público — a concessão do papel `GESTOR` pressupõe vínculo institucional que está fora do escopo técnico do protótipo.
 - **Sessão/JWT:** token de acesso único, expiração de 7 dias, sem fluxo de refresh token nem blocklist de revogação antecipada. Trade-off deliberado de escopo de protótipo (ver "simplicidade sobre generalização" abaixo); revogação de sessão fica como trabalho futuro caso o protótipo evolua para produção. O token é entregue via **cookie `httpOnly` + `Secure` + `SameSite=Lax`** (não `localStorage`, não `Authorization` header) — mitiga roubo de token via XSS. `POST /auth/logout` limpa o cookie no backend (necessário porque JS não tem acesso a ele).
+- **Busca no mapa:** Leaflet Control Geocoder + Nominatim (OpenStreetMap) — mesma lógica de custo zero do Leaflet/OSM. Atenção: política de uso do Nominatim limita a ~1 req/s e exige identificar a aplicação (`User-Agent` customizado); aceitável para o volume do teste com cidadãos, mas não escalaria para produção com tráfego alto sem trocar de provedor.
+- **Codificação visual do pin:** cor = status (aberto/resolvido, já implementado), ícone dentro do pin = categoria (novo — usar `@mui/icons-material`, já disponível no stack). Duas dimensões independentes; não usar cor para as duas coisas ao mesmo tempo.
+- **Dashboard público (transparência):** versão pública e somente leitura do dashboard agregado (total de problemas, % resolvidos, tempo médio de resolução, top categorias), sem autenticação — reaproveita a mesma agregação do `PainelGestor`, já que os dados de `Problem` já são públicos. Reforça diretamente a crítica de Pinho (2008) à falta de transparência real em portais de governo eletrônico, já citada na fundamentação teórica do artigo. **Escopo de uma cidade só** — filtro/seleção "por cidade" é multi-tenant e está fora de escopo (seria preciso uma entidade Município e filtrar todo o resto do sistema por ela); registrado como trabalho futuro.
+- **Upload de foto no registro do problema (stretch goal):** se implementado, usar **Cloudinary** para armazenamento — nunca disco local do Render via `ServeStaticModule`. Confirmado: o filesystem do Render é efêmero por padrão (mudanças somem a cada redeploy/restart/spin-down); disco persistente só existe em planos pagos. Evitar também o Object Storage do Neon por estar em beta (mesma cautela que já aplicamos ao não migrar para o Prisma 8 RC). Campo novo: `Problem.photoUrl`.
 - **Front/back same-origin via proxy de rewrite:** frontend (Vercel) e backend (Render) ficam em domínios diferentes, o que quebraria cookies cross-site em parte dos navegadores (restrições de terceiros, especialmente Safari). Solução: `vercel.json` com `rewrites` de `/api/:path*` para a URL do backend no Render, fazendo o navegador enxergar tudo como um único domínio — mesmo padrão do proxy `/api` já usado no Vite em dev. Evita `SameSite=None`, simplifica CORS, e reduz superfície de CSRF.
-- **Prefixo global `/api` no backend:** `main.ts` chama `app.setGlobalPrefix('api')` — toda rota do Nest (`/auth/login`, `/problems`, etc.) é exposta na prática como `/api/auth/login`, `/api/problems`. Detalhe fácil de esquecer ao configurar o `destination` do rewrite acima: precisa terminar em `/api/:path*` (não só `/:path*`), senão o proxy da Vercel bate na raiz do serviço no Render e cai em 404 — já quase causou um rewrite incorreto.
 - **Acesso a `Problem`:** leitura (listagem e detalhe) é pública, sem exigir login — a transparência do mapa vale antes mesmo do visitante criar conta. Escrita (criar, resolver) exige autenticação. Listagem padrão ordenada por número de votos (não por data), refletindo a priorização colaborativa que sustenta a proposta teórica do trabalho.
 - **Cidade-piloto da validação empírica:** Feira de Santana, BA (coordenadas do centro: -12.2597, -38.9647) — usada como centro padrão do mapa quando não há nenhum problema cadastrado ainda (fallback de `fitBounds`). Coerente com o recrutamento por conveniência já decidido para a Etapa 4 da metodologia.
 - **Banco de dados hospedado no Neon, não no Render:** o Postgres gratuito do Render expira 30 dias após a criação (14 dias de carência antes de apagar os dados) — inviável para um projeto que precisa sobreviver ao período de testes, à defesa e à vida pós-TCC no portfólio. Neon tem free tier permanente (sem expiração), com o banco hibernando quando ocioso e voltando sozinho na próxima conexão. O serviço web da API continua no Render normalmente — só o banco muda de provedor.
@@ -113,7 +118,14 @@ npm run dev                   # frontend (apps/web)
 - Roteamento automático de esfera administrativa (municipal/estadual/federal) — triagem manual pelo gestor, ver decisão acima.
 - Fluxo de autocadastro para o papel `GESTOR` — contas desse tipo são provisionadas manualmente.
 
-## Melhorias possíveis (não obrigatórias — só se sobrar tempo após o MVP)
+## Melhorias possíveis (não obrigatórias — só se sobrar tempo após o núcleo abaixo)
 
-- Filtro por categoria no mapa (baixo custo de implementação, reforça a visualização territorial já prevista no artigo).
-- Upload de foto no registro do problema (stretch goal — exige armazenamento de arquivo, mais peça de infraestrutura para gerenciar no prazo).
+Ordem de prioridade combinada (cada item facilita o próximo):
+1. AppBar/navegação persistente com menu de usuário (logout dentro do menu, não botão solto) — prioridade, afeta todas as telas.
+2. Home explicativa (proposta, como funciona em 3 passos, ideais do projeto) — vira figura da Seção 4.
+3. Pins com ícone de categoria (ver decisão acima).
+4. Busca no mapa (ver decisão acima).
+5. Polimento visual do `PainelGestor` (tipografia, espaçamento, gráfico simples) — sem adicionar ações/funcionalidade nova.
+6. Dashboard público de uma cidade só (ver decisão acima).
+7. Checagem de responsividade mobile (Fab, dialog de registro, mapa) — maioria dos cidadãos vai testar pelo celular.
+8. Upload de foto no registro do problema (ver decisão acima) — **corte obrigatório**: se não estiver pronto quando chegar a data de recrutamento dos participantes, descartar; não pode atrasar o teste com cidadãos.
