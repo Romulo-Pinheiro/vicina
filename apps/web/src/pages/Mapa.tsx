@@ -143,7 +143,7 @@ export function Mapa() {
     return (
       <Box
         sx={{
-          height: '100vh',
+          height: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -155,7 +155,10 @@ export function Mapa() {
   }
 
   return (
-    <Box sx={{ position: 'relative', height: '100vh', width: '100%' }}>
+    // 100% (não 100vh): a AppShell já reserva a altura da barra de
+    // navegação via flexbox — este Box só precisa preencher o restante
+    // (o <main> dela), não a viewport inteira. Ver components/AppShell.tsx.
+    <Box sx={{ position: 'relative', height: '100%', width: '100%' }}>
       <MapContainer
         center={FALLBACK_CENTER}
         zoom={FALLBACK_ZOOM}
