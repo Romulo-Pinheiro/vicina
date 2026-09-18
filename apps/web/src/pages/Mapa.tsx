@@ -32,6 +32,7 @@ import 'leaflet/dist/leaflet.css';
 import '../leaflet-icon-fix';
 import { useAuth } from '../auth/AuthContext';
 import { getCategoryIcon } from '../categoryIcons';
+import { GeocoderControl } from '../components/GeocoderControl';
 import { FALLBACK_CENTER, FALLBACK_ZOOM, OSM_ATTRIBUTION, OSM_TILE_URL } from '../mapConfig';
 import { getPinIcon } from '../mapPinIcon';
 import { ApiError } from '../services/apiClient';
@@ -166,6 +167,7 @@ export function Mapa() {
         }}
       >
         <TileLayer url={OSM_TILE_URL} attribution={OSM_ATTRIBUTION} />
+        <GeocoderControl />
         <FitBounds problems={problems} />
         <MapClickHandler active={placing} onMapClick={handleMapClick} />
 

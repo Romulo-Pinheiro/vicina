@@ -12,3 +12,5 @@ export const PAPEL = '#FAFAF8';
 export const PAPEL_ALT = '#FFFDFB';
 export const NAV_INATIVO = '#9AA3A3';
 export const LINHA = '#E5E5DF';
+export const TINTA = '#20221F';
+export const TEXTO_SECUNDARIO = '#5B6169';
