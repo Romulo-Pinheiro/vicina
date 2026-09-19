@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
 import { Link as RouterLink, Navigate } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -13,6 +13,7 @@ import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
+import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import { PieChart } from '@mui/x-charts/PieChart';
@@ -58,6 +59,12 @@ export function PainelGestor() {
 
   const [problems, setProblems] = useState<Problem[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Paginação só client-side (ver CLAUDE.md, item 5 de "Melhorias
+  // possíveis": sem endpoint dedicado, GET /problems já traz tudo de uma
+  // vez) — evita a tabela virar uma lista infinita se o teste com cidadãos
+  // gerar bastante registro.
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const isGestor = user?.role === 'GESTOR';
 
@@ -85,6 +92,19 @@ export function PainelGestor() {
     const totalVotos = problems.reduce((sum, problem) => sum + problem._count.votes, 0);
     return { total: problems.length, abertos, resolvidos, totalVotos };
   }, [problems]);
+
+  const pagedProblems = useMemo(() => {
+    if (!problems) {
+      return [];
+    }
+    const start = page * rowsPerPage;
+    return problems.slice(start, start + rowsPerPage);
+  }, [problems, page, rowsPerPage]);
+
+  function handleChangeRowsPerPage(event: ChangeEvent<HTMLInputElement>): void {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  }
 
   if (authLoading) {
     return (
@@ -224,7 +244,7 @@ export function PainelGestor() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {problems.map((problem) => (
+                  {pagedProblems.map((problem) => (
                     <TableRow key={problem.id} hover>
                       <TableCell>
                         <Link component={RouterLink} to={`/problemas/${problem.id}`} sx={{ color: SINAL }} underline="hover">
@@ -270,6 +290,18 @@ export function PainelGestor() {
                   )}
                 </TableBody>
               </Table>
+              <TablePagination
+                component="div"
+                count={problems.length}
+                page={page}
+                onPageChange={(_event, newPage) => setPage(newPage)}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                rowsPerPageOptions={[5, 10, 25, 50]}
+                labelRowsPerPage="Linhas por página:"
+                labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
+                sx={{ borderTop: `1px solid ${LINHA}`, fontFamily: MONO }}
+              />
             </TableContainer>
           </>
         )}
