@@ -10,11 +10,17 @@ export interface Problem {
   latitude: number;
   longitude: number;
   status: ProblemStatus;
+  isAnonymous: boolean;
   resolvedAt: string | null;
   resolutionRating: number | null;
   createdAt: string;
   updatedAt: string;
   category: { id: string; name: string };
+  // Quando isAnonymous é true, o backend já substitui name por "Cidadão
+  // anônimo" antes de responder (ver maskAnonymousAuthor em
+  // problems.service.ts) — nunca chega o nome real aqui. id continua sendo
+  // o do autor de verdade (não é dado identificável sozinho, e a UI precisa
+  // dele pra saber se o usuário logado é o autor e pode resolver).
   author: { id: string; name: string };
   _count: { votes: number; comments: number };
 }
@@ -25,6 +31,7 @@ export interface CreateProblemInput {
   categoryId: string;
   latitude: number;
   longitude: number;
+  isAnonymous?: boolean;
 }
 
 // Público — não exige sessão (ver GET /problems no backend).

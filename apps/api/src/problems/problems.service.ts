@@ -22,6 +22,7 @@ const PROBLEM_SELECT = {
   latitude: true,
   longitude: true,
   status: true,
+  isAnonymous: true,
   resolvedAt: true,
   resolutionRating: true,
   createdAt: true,
@@ -34,6 +35,23 @@ const PROBLEM_SELECT = {
 type ProblemWithRelations = Prisma.ProblemGetPayload<{
   select: typeof PROBLEM_SELECT;
 }>;
+
+// Anonimato opcional (ver CLAUDE.md) — mascarado aqui, na camada de leitura
+// compartilhada por todo o módulo, não no frontend: se o nome real saísse
+// da API mesmo que só pra ser escondido na tela, bastaria abrir a aba de
+// rede do navegador (ou chamar a API direto) pra descobrir quem reportou —
+// anonimato que só existe na UI não é anonimato de verdade. authorId
+// continua saindo normalmente (não é dado identificável sozinho, e o
+// frontend precisa dele pra decidir se o usuário logado é o autor e pode
+// resolver o próprio problema, mesmo anônimo).
+const ANONYMOUS_AUTHOR_NAME = 'Cidadão anônimo';
+
+function maskAnonymousAuthor<T extends ProblemWithRelations>(problem: T): T {
+  if (!problem.isAnonymous) {
+    return problem;
+  }
+  return { ...problem, author: { ...problem.author, name: ANONYMOUS_AUTHOR_NAME } };
+}
 
 // Select enxuto pra getPublicStats() — só o que entra em alguma conta ou
 // média. Em especial, sem author: o endpoint por trás dessa agregação
@@ -79,13 +97,14 @@ export class ProblemsService {
           longitude: dto.longitude,
           categoryId: dto.categoryId,
           authorId,
+          isAnonymous: dto.isAnonymous ?? false,
         },
         select: PROBLEM_SELECT,
       });
       this.logger.log(
-        `Problema registrado: ${problem.id} (categoria=${dto.categoryId}, autor=${authorId})`,
+        `Problema registrado: ${problem.id} (categoria=${dto.categoryId}, autor=${authorId}, anônimo=${problem.isAnonymous})`,
       );
-      return problem;
+      return maskAnonymousAuthor(problem);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -98,14 +117,15 @@ export class ProblemsService {
     }
   }
 
-  findAll(): Promise<ProblemWithRelations[]> {
+  async findAll(): Promise<ProblemWithRelations[]> {
     // Ordena por nº de votos (desc) — reflete a proposta central da
     // plataforma (acompanhar a priorização das demandas pelos cidadãos), não
     // só a ordem cronológica de registro.
-    return this.prisma.problem.findMany({
+    const problems = await this.prisma.problem.findMany({
       select: PROBLEM_SELECT,
       orderBy: [{ votes: { _count: 'desc' } }, { createdAt: 'desc' }],
     });
+    return problems.map(maskAnonymousAuthor);
   }
 
   async findOne(id: string): Promise<ProblemWithRelations> {
@@ -116,7 +136,7 @@ export class ProblemsService {
     if (!problem) {
       throw new NotFoundException('Problema não encontrado');
     }
-    return problem;
+    return maskAnonymousAuthor(problem);
   }
 
   // Sem endpoint de exclusão, por decisão de escopo (ver CLAUDE.md, seção
@@ -156,7 +176,7 @@ export class ProblemsService {
     this.logger.log(
       `Problema resolvido: ${id} (rating=${dto.resolutionRating ?? 'n/a'})`,
     );
-    return updated;
+    return maskAnonymousAuthor(updated);
   }
 
   // Reaproveitado por GET /transparencia/estatisticas (dashboard público) —

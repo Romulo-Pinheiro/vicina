@@ -3,6 +3,7 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
@@ -12,6 +13,7 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Fab from '@mui/material/Fab';
 import FormControl from '@mui/material/FormControl';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Select, { type SelectChangeEvent } from '@mui/material/Select';
@@ -60,6 +62,7 @@ export function Mapa() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -97,6 +100,7 @@ export function Mapa() {
     setTitle('');
     setDescription('');
     setCategoryId('');
+    setIsAnonymous(false);
     setFormError(null);
   }
 
@@ -114,6 +118,7 @@ export function Mapa() {
         categoryId,
         latitude: pendingLocation.lat,
         longitude: pendingLocation.lng,
+        isAnonymous,
       });
       setProblems((current) => (current ? [...current, created] : [created]));
       setSuccessMessage('Problema registrado com sucesso.');
@@ -288,6 +293,26 @@ export function Mapa() {
                 ))}
               </Select>
             </FormControl>
+
+            <FormControlLabel
+              sx={{ mt: 1, alignItems: 'flex-start' }}
+              disabled={submitting}
+              control={
+                <Checkbox
+                  checked={isAnonymous}
+                  onChange={(event) => setIsAnonymous(event.target.checked)}
+                  sx={{ pt: 0 }}
+                />
+              }
+              label={
+                <Stack sx={{ mt: '9px' }}>
+                  <Typography variant="body2">Publicar como anônimo</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Seu nome não aparecerá para outras pessoas — a escolha não pode ser mudada depois.
+                  </Typography>
+                </Stack>
+              }
+            />
           </DialogContent>
           <DialogActions>
             <Button onClick={closeDialog} disabled={submitting}>

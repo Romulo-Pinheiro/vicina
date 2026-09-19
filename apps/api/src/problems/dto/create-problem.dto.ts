@@ -1,6 +1,8 @@
 import {
+  IsBoolean,
   IsLatitude,
   IsLongitude,
+  IsOptional,
   IsString,
   IsUUID,
   MaxLength,
@@ -29,4 +31,11 @@ export class CreateProblemDto {
 
   @IsLongitude({ message: 'Longitude inválida' })
   longitude: number;
+
+  // Anonimato opcional (ver CLAUDE.md) — escolhido só na criação, não
+  // editável depois. Default false decidido no service, não aqui, pra
+  // authorId continuar sempre preenchido independente disso.
+  @IsOptional()
+  @IsBoolean({ message: 'isAnonymous deve ser um booleano' })
+  isAnonymous?: boolean;
 }

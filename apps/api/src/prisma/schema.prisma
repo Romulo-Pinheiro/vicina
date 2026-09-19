@@ -82,6 +82,12 @@ model Problem {
   authorId String @map("author_id")
   author   User   @relation(fields: [authorId], references: [id])
 
+  // Anonimato opcional (ver CLAUDE.md) — só controla exibição pública do
+  // nome do autor, escolhido na criação e não editável depois. authorId
+  // continua sempre preenchido (integridade, unicidade de voto, e o próprio
+  // autor precisa continuar podendo resolver o problema).
+  isAnonymous Boolean @default(false) @map("is_anonymous")
+
   votes    Vote[]
   comments Comment[]
 
