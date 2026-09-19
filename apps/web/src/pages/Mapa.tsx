@@ -229,7 +229,18 @@ export function Mapa() {
       {placing && (
         <Alert
           severity="info"
-          sx={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}
+          sx={{
+            position: 'absolute',
+            // 68px: limpa a barra de busca do geocoder (44px de altura +
+            // ~10px de margem padrão do Leaflet pros seus controles, ver
+            // GeocoderControl.tsx) — com 16px os dois se sobrepunham,
+            // confirmado em captura de tela em ~375px e ~768px de largura.
+            top: 68,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1000,
+            maxWidth: 'calc(100% - 32px)',
+          }}
         >
           Clique no mapa pra marcar onde é o problema
         </Alert>
@@ -244,7 +255,24 @@ export function Mapa() {
         +
       </Fab>
 
-      <Dialog open={pendingLocation !== null} onClose={closeDialog} fullWidth maxWidth="xs">
+      <Dialog
+        open={pendingLocation !== null}
+        onClose={closeDialog}
+        fullWidth
+        maxWidth="xs"
+        // Ancorado no topo (não centralizado) abaixo de "sm": o dialog
+        // centralizado por padrão do MUI, combinado com o teclado virtual
+        // do celular cobrindo a metade de baixo da tela, empurra os campos
+        // de baixo (Categoria, checkbox de anônimo, Registrar) pra fora da
+        // área visível. Perto do topo, o teclado só cobre o que já rolou
+        // pra fora por conta própria, e o usuário ainda rola o dialog.
+        sx={{
+          '& .MuiDialog-container': {
+            alignItems: { xs: 'flex-start', sm: 'center' },
+          },
+        }}
+        slotProps={{ paper: { sx: { mt: { xs: 4, sm: 0 } } } }}
+      >
         <Box component="form" onSubmit={handleSubmit} noValidate>
           <DialogTitle>Registrar problema</DialogTitle>
           <DialogContent>
