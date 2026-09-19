@@ -230,66 +230,74 @@ export function PainelGestor() {
             </Stack>
 
             <Eyebrow sx={{ mb: 1.5 }}>Todos os problemas</Eyebrow>
-            <TableContainer sx={{ border: `1px solid ${LINHA}`, borderRadius: '14px', overflow: 'hidden' }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <HeadCell>Título</HeadCell>
-                    <HeadCell>Categoria</HeadCell>
-                    <HeadCell>Status</HeadCell>
-                    <HeadCell align="right">Votos</HeadCell>
-                    <HeadCell align="right">Comentários</HeadCell>
-                    <HeadCell>Autor</HeadCell>
-                    <HeadCell>Criado em</HeadCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {pagedProblems.map((problem) => (
-                    <TableRow key={problem.id} hover>
-                      <TableCell>
-                        <Link component={RouterLink} to={`/problemas/${problem.id}`} sx={{ color: SINAL }} underline="hover">
-                          {problem.title}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{problem.category.name}</TableCell>
-                      <TableCell>
-                        {problem.status === 'ABERTO' ? (
-                          <Chip
-                            label="Aberto"
-                            size="small"
-                            sx={{ backgroundColor: SINAL_TINTA, color: SINAL_TINTA_TEXTO, fontWeight: 600 }}
-                          />
-                        ) : (
-                          <Chip
-                            label="Resolvido"
-                            size="small"
-                            sx={{ backgroundColor: ARDOSIA, color: PAPEL_ALT, fontWeight: 600 }}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell align="right" sx={{ fontFamily: MONO }}>
-                        {problem._count.votes}
-                      </TableCell>
-                      <TableCell align="right" sx={{ fontFamily: MONO }}>
-                        {problem._count.comments}
-                      </TableCell>
-                      <TableCell>{problem.author.name}</TableCell>
-                      <TableCell sx={{ fontFamily: MONO, fontSize: '0.8125rem' }}>
-                        {formatDate(problem.createdAt)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {problems.length === 0 && (
+            {/* overflow:hidden pros cantos arredondados vai no Box de fora —
+                na TableContainer ele desligava o próprio overflow-x:auto
+                dela, que é o que faz a tabela rolar em vez de espremer as
+                colunas (mesmo bug corrigido antes em Transparencia.tsx).
+                Table com minWidth garante que sobra o quê rolar quando não
+                cabe. */}
+            <Box sx={{ border: `1px solid ${LINHA}`, borderRadius: '14px', overflow: 'hidden' }}>
+              <TableContainer sx={{ overflowX: 'auto' }}>
+                <Table size="small" sx={{ minWidth: 830 }}>
+                  <TableHead>
                     <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                        <Typography variant="body2" sx={{ color: TEXTO_SECUNDARIO }}>
-                          Nenhum problema registrado ainda.
-                        </Typography>
-                      </TableCell>
+                      <HeadCell>Título</HeadCell>
+                      <HeadCell>Categoria</HeadCell>
+                      <HeadCell>Status</HeadCell>
+                      <HeadCell align="right">Votos</HeadCell>
+                      <HeadCell align="right">Comentários</HeadCell>
+                      <HeadCell>Autor</HeadCell>
+                      <HeadCell>Criado em</HeadCell>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHead>
+                  <TableBody>
+                    {pagedProblems.map((problem) => (
+                      <TableRow key={problem.id} hover>
+                        <TableCell>
+                          <Link component={RouterLink} to={`/problemas/${problem.id}`} sx={{ color: SINAL }} underline="hover">
+                            {problem.title}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{problem.category.name}</TableCell>
+                        <TableCell>
+                          {problem.status === 'ABERTO' ? (
+                            <Chip
+                              label="Aberto"
+                              size="small"
+                              sx={{ backgroundColor: SINAL_TINTA, color: SINAL_TINTA_TEXTO, fontWeight: 600 }}
+                            />
+                          ) : (
+                            <Chip
+                              label="Resolvido"
+                              size="small"
+                              sx={{ backgroundColor: ARDOSIA, color: PAPEL_ALT, fontWeight: 600 }}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell align="right" sx={{ fontFamily: MONO }}>
+                          {problem._count.votes}
+                        </TableCell>
+                        <TableCell align="right" sx={{ fontFamily: MONO }}>
+                          {problem._count.comments}
+                        </TableCell>
+                        <TableCell>{problem.author.name}</TableCell>
+                        <TableCell sx={{ fontFamily: MONO, fontSize: '0.8125rem' }}>
+                          {formatDate(problem.createdAt)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {problems.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                          <Typography variant="body2" sx={{ color: TEXTO_SECUNDARIO }}>
+                            Nenhum problema registrado ainda.
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
               <TablePagination
                 component="div"
                 count={problems.length}
@@ -302,7 +310,7 @@ export function PainelGestor() {
                 labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
                 sx={{ borderTop: `1px solid ${LINHA}`, fontFamily: MONO }}
               />
-            </TableContainer>
+            </Box>
           </>
         )}
       </Box>
