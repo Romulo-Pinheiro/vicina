@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link as RouterLink, Navigate } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Container from '@mui/material/Container';
+import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -16,9 +15,24 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
+import { PieChart } from '@mui/x-charts/PieChart';
 import { useAuth } from '../auth/AuthContext';
+import {
+  ARDOSIA,
+  ARDOSIA_TINTA,
+  LINHA,
+  PAPEL_ALT,
+  SINAL,
+  SINAL_TINTA,
+  SINAL_TINTA_TEXTO,
+  TEXTO_SECUNDARIO,
+  TINTA,
+} from '../identityColors';
 import { ApiError } from '../services/apiClient';
 import { listProblems, type Problem } from '../services/problemsService';
+
+const SERIF = "'Instrument Serif', serif";
+const MONO = "'IBM Plex Mono', monospace";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('pt-BR');
@@ -33,6 +47,12 @@ function formatDate(iso: string): string {
 // exclusão, categorização manual, foi implementada aqui). Reaproveita o
 // GET /problems público já existente; não há endpoint dedicado a gestor no
 // backend porque nenhuma consulta ou ação exclusiva dele foi necessária.
+//
+// Polimento visual (ver CLAUDE.md, "Melhorias possíveis" item 5): mesma
+// paleta/tipografia do resto do app, seguindo de perto o mockup "PAINEL DO
+// GESTOR" da seção MARCA EM USO de docs/Vicina_Identidade_Visual.html
+// (tiles de métrica com fundo tintado por status, números em Instrument
+// Serif, dados em IBM Plex Mono). Sem mudança de dado, endpoint ou lógica.
 export function PainelGestor() {
   const { user, loading: authLoading } = useAuth();
 
@@ -104,10 +124,13 @@ export function PainelGestor() {
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 4, mb: 6 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+        <Typography
+          component="h1"
+          sx={{ fontFamily: SERIF, fontWeight: 400, fontSize: '2.25rem', color: TINTA }}
+        >
           Painel do gestor
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        <Typography variant="body2" sx={{ color: TEXTO_SECUNDARIO, mb: 3 }}>
           Visão geral dos problemas reportados pelos cidadãos, somente leitura.
         </Typography>
 
@@ -123,52 +146,123 @@ export function PainelGestor() {
           </Box>
         ) : (
           <>
-            <Stack direction="row" spacing={2} sx={{ mb: 4, flexWrap: 'wrap' }}>
-              <StatCard label="Total de problemas" value={stats!.total} />
-              <StatCard label="Em aberto" value={stats!.abertos} />
-              <StatCard label="Resolvidos" value={stats!.resolvidos} />
-              <StatCard label="Votos acumulados" value={stats!.totalVotos} />
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2.5} sx={{ mb: 5 }} alignItems="stretch">
+              <Box
+                sx={{
+                  flex: { md: '2 1 0' },
+                  backgroundColor: '#FFFFFF',
+                  border: `1px solid ${LINHA}`,
+                  borderRadius: '16px',
+                  padding: '22px',
+                }}
+              >
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' },
+                    gap: '12px',
+                  }}
+                >
+                  <StatTile value={stats!.total} label="Total de problemas" background={PAPEL_ALT} valueColor={TINTA} labelColor={TEXTO_SECUNDARIO} />
+                  <StatTile value={stats!.abertos} label="Em aberto" background={SINAL_TINTA} valueColor={SINAL_TINTA_TEXTO} labelColor={SINAL_TINTA_TEXTO} />
+                  <StatTile value={stats!.resolvidos} label="Resolvidos" background={ARDOSIA_TINTA} valueColor={ARDOSIA} labelColor={ARDOSIA} />
+                  <StatTile value={stats!.totalVotos} label="Votos acumulados" background={PAPEL_ALT} valueColor={TINTA} labelColor={TEXTO_SECUNDARIO} />
+                </Box>
+              </Box>
+
+              <Box
+                sx={{
+                  flex: { md: '1 1 0' },
+                  backgroundColor: PAPEL_ALT,
+                  border: `1px solid ${LINHA}`,
+                  borderRadius: '16px',
+                  padding: '22px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minWidth: 0,
+                }}
+              >
+                <Eyebrow sx={{ mb: 1 }}>Status</Eyebrow>
+                {stats!.total > 0 ? (
+                  <PieChart
+                    series={[
+                      {
+                        data: [
+                          { id: 'aberto', value: stats!.abertos, label: 'Aberto', color: SINAL },
+                          { id: 'resolvido', value: stats!.resolvidos, label: 'Resolvido', color: ARDOSIA },
+                        ],
+                        innerRadius: 42,
+                        paddingAngle: 2,
+                        cornerRadius: 3,
+                      },
+                    ]}
+                    height={180}
+                    margin={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  />
+                ) : (
+                  <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 180 }}>
+                    <Typography variant="body2" sx={{ color: TEXTO_SECUNDARIO, textAlign: 'center' }}>
+                      Nenhum problema registrado ainda.
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
             </Stack>
 
-            <TableContainer>
+            <Eyebrow sx={{ mb: 1.5 }}>Todos os problemas</Eyebrow>
+            <TableContainer sx={{ border: `1px solid ${LINHA}`, borderRadius: '14px', overflow: 'hidden' }}>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>Título</TableCell>
-                    <TableCell>Categoria</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell align="right">Votos</TableCell>
-                    <TableCell align="right">Comentários</TableCell>
-                    <TableCell>Autor</TableCell>
-                    <TableCell>Criado em</TableCell>
+                    <HeadCell>Título</HeadCell>
+                    <HeadCell>Categoria</HeadCell>
+                    <HeadCell>Status</HeadCell>
+                    <HeadCell align="right">Votos</HeadCell>
+                    <HeadCell align="right">Comentários</HeadCell>
+                    <HeadCell>Autor</HeadCell>
+                    <HeadCell>Criado em</HeadCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {problems.map((problem) => (
                     <TableRow key={problem.id} hover>
                       <TableCell>
-                        <RouterLink to={`/problemas/${problem.id}`}>
+                        <Link component={RouterLink} to={`/problemas/${problem.id}`} sx={{ color: SINAL }} underline="hover">
                           {problem.title}
-                        </RouterLink>
+                        </Link>
                       </TableCell>
                       <TableCell>{problem.category.name}</TableCell>
                       <TableCell>
-                        <Chip
-                          label={problem.status === 'ABERTO' ? 'Aberto' : 'Resolvido'}
-                          size="small"
-                          color={problem.status === 'ABERTO' ? 'warning' : 'success'}
-                        />
+                        {problem.status === 'ABERTO' ? (
+                          <Chip
+                            label="Aberto"
+                            size="small"
+                            sx={{ backgroundColor: SINAL_TINTA, color: SINAL_TINTA_TEXTO, fontWeight: 600 }}
+                          />
+                        ) : (
+                          <Chip
+                            label="Resolvido"
+                            size="small"
+                            sx={{ backgroundColor: ARDOSIA, color: PAPEL_ALT, fontWeight: 600 }}
+                          />
+                        )}
                       </TableCell>
-                      <TableCell align="right">{problem._count.votes}</TableCell>
-                      <TableCell align="right">{problem._count.comments}</TableCell>
+                      <TableCell align="right" sx={{ fontFamily: MONO }}>
+                        {problem._count.votes}
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontFamily: MONO }}>
+                        {problem._count.comments}
+                      </TableCell>
                       <TableCell>{problem.author.name}</TableCell>
-                      <TableCell>{formatDate(problem.createdAt)}</TableCell>
+                      <TableCell sx={{ fontFamily: MONO, fontSize: '0.8125rem' }}>
+                        {formatDate(problem.createdAt)}
+                      </TableCell>
                     </TableRow>
                   ))}
                   {problems.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} align="center">
-                        <Typography variant="body2" color="text.secondary">
+                      <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                        <Typography variant="body2" sx={{ color: TEXTO_SECUNDARIO }}>
                           Nenhum problema registrado ainda.
                         </Typography>
                       </TableCell>
@@ -184,15 +278,63 @@ export function PainelGestor() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+// Rótulo pequeno em versalete/mono — mesmo padrão do doc de identidade pra
+// título de seção discreto (ex.: "PAINEL DO GESTOR" no mockup da seção
+// MARCA EM USO), reaproveitado aqui como separador de blocos da página.
+function Eyebrow({ children, sx }: { children: ReactNode; sx?: object }) {
   return (
-    <Card variant="outlined" sx={{ minWidth: 160 }}>
-      <CardContent>
-        <Typography variant="h5">{value}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {label}
-        </Typography>
-      </CardContent>
-    </Card>
+    <Typography
+      sx={{
+        fontFamily: MONO,
+        fontSize: '0.6875rem',
+        letterSpacing: '0.1em',
+        textTransform: 'uppercase',
+        color: TEXTO_SECUNDARIO,
+        ...sx,
+      }}
+    >
+      {children}
+    </Typography>
+  );
+}
+
+function HeadCell({ children, align }: { children: ReactNode; align?: 'right' | 'left' }) {
+  return (
+    <TableCell
+      align={align}
+      sx={{
+        fontFamily: MONO,
+        fontSize: '0.6875rem',
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        color: TEXTO_SECUNDARIO,
+        fontWeight: 500,
+      }}
+    >
+      {children}
+    </TableCell>
+  );
+}
+
+function StatTile({
+  value,
+  label,
+  background,
+  valueColor,
+  labelColor,
+}: {
+  value: number;
+  label: string;
+  background: string;
+  valueColor: string;
+  labelColor: string;
+}) {
+  return (
+    <Box sx={{ backgroundColor: background, borderRadius: '11px', padding: '13px' }}>
+      <Typography sx={{ fontFamily: SERIF, fontWeight: 400, fontSize: '2rem', lineHeight: 1, color: valueColor }}>
+        {value}
+      </Typography>
+      <Typography sx={{ fontSize: '0.75rem', color: labelColor, mt: 0.5 }}>{label}</Typography>
+    </Box>
   );
 }
