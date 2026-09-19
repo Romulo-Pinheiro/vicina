@@ -262,11 +262,15 @@ export function DetalheProblema() {
           </Alert>
         )}
 
-        <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+        {/* minHeight 44px — padrão de acessibilidade de área de toque mínima
+            pra ação primária em mobile; o Button "medium" default do MUI
+            fica em ~36px, curto demais pro dedo. */}
+        <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap', rowGap: 1 }}>
           <Button
             variant={voted ? 'outlined' : 'contained'}
             onClick={() => void handleToggleVote()}
             disabled={voteSubmitting}
+            sx={{ minHeight: 44 }}
           >
             {voteSubmitting ? (
               <CircularProgress size={20} color="inherit" />
@@ -278,7 +282,12 @@ export function DetalheProblema() {
           </Button>
 
           {canResolve && (
-            <Button variant="outlined" color="success" onClick={() => setResolveDialogOpen(true)}>
+            <Button
+              variant="outlined"
+              color="success"
+              onClick={() => setResolveDialogOpen(true)}
+              sx={{ minHeight: 44 }}
+            >
               Marcar como resolvido
             </Button>
           )}
@@ -339,7 +348,7 @@ export function DetalheProblema() {
             <Button
               type="submit"
               variant="contained"
-              sx={{ mt: 1 }}
+              sx={{ mt: 1, minHeight: 44 }}
               disabled={commentSubmitting}
             >
               {commentSubmitting ? (
