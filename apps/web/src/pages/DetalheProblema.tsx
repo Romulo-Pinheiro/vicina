@@ -17,6 +17,7 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useAuth } from '../auth/AuthContext';
+import { RESOLUTION_NOTE_TEMPLATE } from '../resolutionNoteTemplate';
 import { ApiError } from '../services/apiClient';
 import {
   createComment,
@@ -428,6 +429,21 @@ export function DetalheProblema() {
             onChange={(event) => setResolutionNote(event.target.value)}
             disabled={resolveSubmitting}
           />
+          {/* Modelo no padrão de resposta de gestão pública — só faz sentido
+              pra voz institucional do gestor, não pro autor confirmando a
+              própria resolução com as próprias palavras. Sem nada
+              pré-preenchido (ex.: secretaria pela categoria): a app não tem
+              dado confiável sobre qual órgão resolveu de fato. */}
+          {!isAuthor && (
+            <Button
+              size="small"
+              onClick={() => setResolutionNote(RESOLUTION_NOTE_TEMPLATE)}
+              disabled={resolveSubmitting}
+              sx={{ mt: 0.5 }}
+            >
+              Usar modelo
+            </Button>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={closeResolveDialog} disabled={resolveSubmitting}>

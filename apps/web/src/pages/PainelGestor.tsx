@@ -35,6 +35,7 @@ import {
   TEXTO_SECUNDARIO,
   TINTA,
 } from '../identityColors';
+import { RESOLUTION_NOTE_TEMPLATE } from '../resolutionNoteTemplate';
 import { ApiError } from '../services/apiClient';
 import { listProblems, resolveProblem, type Problem } from '../services/problemsService';
 
@@ -401,6 +402,19 @@ export function PainelGestor() {
             onChange={(event) => setResolutionNote(event.target.value)}
             disabled={resolveSubmitting}
           />
+          {/* Modelo no padrão de resposta de gestão pública (quem resolveu,
+              causa, solução) — sem nada pré-preenchido (ex.: secretaria por
+              categoria): a app não tem dado confiável sobre qual órgão
+              resolveu de fato, então sugerir um nome seria inventar
+              informação. Só um ponto de partida editável, nunca obrigatório. */}
+          <Button
+            size="small"
+            onClick={() => setResolutionNote(RESOLUTION_NOTE_TEMPLATE)}
+            disabled={resolveSubmitting}
+            sx={{ mt: 0.5 }}
+          >
+            Usar modelo
+          </Button>
         </DialogContent>
         <DialogActions>
           <Button onClick={closeResolveDialog} disabled={resolveSubmitting}>
