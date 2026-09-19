@@ -188,9 +188,22 @@ export function Transparencia() {
                   <BarChart
                     layout="horizontal"
                     series={[{ data: categoriasOrdenadas.map((c) => c.total), color: SINAL }]}
-                    yAxis={[{ scaleType: 'band', data: categoriasOrdenadas.map((c) => c.categoria) }]}
+                    yAxis={[
+                      {
+                        scaleType: 'band',
+                        data: categoriasOrdenadas.map((c) => c.categoria),
+                        // `width` (não `margin.left`!) é quem decide o
+                        // espaço disponível pro rótulo do eixo — margin.left
+                        // sozinho só empurra a área de plotagem, sem avisar
+                        // o eixo, que segue cortando o texto com reticências
+                        // pra caber no width default (bem menor, ~40-60px)
+                        // (ver ChartsYAxis/ChartsSingleYAxisTicks.mjs).
+                        width: 140,
+                        tickLabelStyle: { fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11 },
+                      },
+                    ]}
                     height={Math.max(180, categoriasOrdenadas.length * 40)}
-                    margin={{ left: 150, right: 16, top: 8, bottom: 24 }}
+                    margin={{ right: 16, top: 8, bottom: 24 }}
                     hideLegend
                   />
                 ) : (
@@ -204,60 +217,67 @@ export function Transparencia() {
             </Stack>
 
             <Eyebrow sx={{ mb: 1.5 }}>Todos os problemas</Eyebrow>
-            <TableContainer sx={{ border: `1px solid ${LINHA}`, borderRadius: '14px', overflow: 'hidden' }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <HeadCell>Título</HeadCell>
-                    <HeadCell>Categoria</HeadCell>
-                    <HeadCell>Status</HeadCell>
-                    <HeadCell align="right">Votos</HeadCell>
-                    <HeadCell>Criado em</HeadCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {pagedProblems.map((problem) => (
-                    <TableRow key={problem.id} hover>
-                      <TableCell>
-                        <Link component={RouterLink} to={`/problemas/${problem.id}`} sx={{ color: SINAL }} underline="hover">
-                          {problem.title}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{problem.category.name}</TableCell>
-                      <TableCell>
-                        {problem.status === 'ABERTO' ? (
-                          <Chip
-                            label="Aberto"
-                            size="small"
-                            sx={{ backgroundColor: SINAL_TINTA, color: SINAL_TINTA_TEXTO, fontWeight: 600 }}
-                          />
-                        ) : (
-                          <Chip
-                            label="Resolvido"
-                            size="small"
-                            sx={{ backgroundColor: ARDOSIA, color: PAPEL_ALT, fontWeight: 600 }}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell align="right" sx={{ fontFamily: MONO }}>
-                        {problem._count.votes}
-                      </TableCell>
-                      <TableCell sx={{ fontFamily: MONO, fontSize: '0.8125rem' }}>
-                        {formatDate(problem.createdAt)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {problems.length === 0 && (
+            {/* O overflow:hidden pros cantos arredondados vai no Box de
+                fora — na TableContainer ele cortava o próprio scroll
+                horizontal que ela deveria fornecer, espremendo as colunas
+                (chip de status cortado no meio) em vez de rolar. Table com
+                minWidth garante que, quando não coube, sobra o quê rolar. */}
+            <Box sx={{ border: `1px solid ${LINHA}`, borderRadius: '14px', overflow: 'hidden' }}>
+              <TableContainer sx={{ overflowX: 'auto' }}>
+                <Table size="small" sx={{ minWidth: 620 }}>
+                  <TableHead>
                     <TableRow>
-                      <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                        <Typography variant="body2" sx={{ color: TEXTO_SECUNDARIO }}>
-                          Nenhum problema registrado ainda.
-                        </Typography>
-                      </TableCell>
+                      <HeadCell>Título</HeadCell>
+                      <HeadCell>Categoria</HeadCell>
+                      <HeadCell>Status</HeadCell>
+                      <HeadCell align="right">Votos</HeadCell>
+                      <HeadCell>Criado em</HeadCell>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHead>
+                  <TableBody>
+                    {pagedProblems.map((problem) => (
+                      <TableRow key={problem.id} hover>
+                        <TableCell>
+                          <Link component={RouterLink} to={`/problemas/${problem.id}`} sx={{ color: SINAL }} underline="hover">
+                            {problem.title}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{problem.category.name}</TableCell>
+                        <TableCell>
+                          {problem.status === 'ABERTO' ? (
+                            <Chip
+                              label="Aberto"
+                              size="small"
+                              sx={{ backgroundColor: SINAL_TINTA, color: SINAL_TINTA_TEXTO, fontWeight: 600 }}
+                            />
+                          ) : (
+                            <Chip
+                              label="Resolvido"
+                              size="small"
+                              sx={{ backgroundColor: ARDOSIA, color: PAPEL_ALT, fontWeight: 600 }}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell align="right" sx={{ fontFamily: MONO }}>
+                          {problem._count.votes}
+                        </TableCell>
+                        <TableCell sx={{ fontFamily: MONO, fontSize: '0.8125rem' }}>
+                          {formatDate(problem.createdAt)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {problems.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                          <Typography variant="body2" sx={{ color: TEXTO_SECUNDARIO }}>
+                            Nenhum problema registrado ainda.
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
               <TablePagination
                 component="div"
                 count={problems.length}
@@ -270,7 +290,7 @@ export function Transparencia() {
                 labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
                 sx={{ borderTop: `1px solid ${LINHA}`, fontFamily: MONO }}
               />
-            </TableContainer>
+            </Box>
           </>
         ) : null}
       </Box>
