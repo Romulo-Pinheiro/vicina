@@ -1,10 +1,16 @@
 import { useState, type MouseEvent, type ReactNode } from 'react';
 import { Link as RouterLink, NavLink, useNavigate } from 'react-router-dom';
+import MenuIcon from '@mui/icons-material/Menu';
 import AppBar from '@mui/material/AppBar';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
+import Divider from '@mui/material/Divider';
+import Drawer from '@mui/material/Drawer';
+import IconButton from '@mui/material/IconButton';
+import List from '@mui/material/List';
+import ListItemButton from '@mui/material/ListItemButton';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
@@ -15,11 +21,13 @@ import { useAuth } from '../auth/AuthContext';
 import {
   ARDOSIA,
   ARDOSIA_PROFUNDA,
+  LINHA,
   NAV_INATIVO,
   PAPEL,
   SINAL,
   SINAL_CLARA,
   SINAL_ESCURA,
+  TINTA,
 } from '../identityColors';
 
 // react-router acrescenta a classe "active" sozinho quando a rota do link
@@ -72,6 +80,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  // Abaixo do breakpoint "sm" os itens de navegação não cabem numa linha só
+  // ao lado da wordmark + menu de usuário (mediram ~100px de AppBar, duas
+  // linhas, no teste em ~375px) — viram um Drawer atrás de um hambúrguer.
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   function handleOpenMenu(event: MouseEvent<HTMLElement>): void {
     setAnchorEl(event.currentTarget);
@@ -83,6 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   async function handleLogout(): Promise<void> {
     handleCloseMenu();
+    setMobileNavOpen(false);
     await logout();
     navigate('/');
   }
@@ -100,10 +113,23 @@ export function AppShell({ children }: { children: ReactNode }) {
         elevation={0}
         sx={{ bgcolor: ARDOSIA, borderBottom: `1px solid ${ARDOSIA_PROFUNDA}` }}
       >
-        <Toolbar sx={{ gap: 3, flexWrap: 'wrap', rowGap: 1, py: 1 }}>
+        <Toolbar sx={{ gap: { xs: 1.5, sm: 3 }, py: 1 }}>
+          <IconButton
+            onClick={() => setMobileNavOpen(true)}
+            aria-label="Abrir menu de navegação"
+            sx={{ display: { xs: 'inline-flex', sm: 'none' }, color: PAPEL, mr: -0.5 }}
+          >
+            <MenuIcon />
+          </IconButton>
+
           <Wordmark />
 
-          <Stack direction="row" spacing={3} alignItems="center" sx={{ flex: 1 }}>
+          <Stack
+            direction="row"
+            spacing={3}
+            alignItems="center"
+            sx={{ flex: 1, display: { xs: 'none', sm: 'flex' } }}
+          >
             <NavItem to="/mapa">Mapa</NavItem>
             {/* Pública de propósito — sem checagem de user aqui, ao contrário
                 do link de painel-gestor logo abaixo (ver decisão "Dashboard
@@ -111,6 +137,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <NavItem to="/transparencia">Transparência</NavItem>
             {user?.role === 'GESTOR' && <NavItem to="/painel-gestor">Painel do gestor</NavItem>}
           </Stack>
+
+          {/* Empurra o menu de usuário/"Entrar" pra direita quando o Stack
+              acima está escondido (xs) e não sobra nenhum flex:1 no meio. */}
+          <Box sx={{ flex: { xs: 1, sm: 0 } }} />
 
           {loading ? (
             <CircularProgress size={20} sx={{ color: NAV_INATIVO }} />
@@ -160,9 +190,61 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Toolbar>
       </AppBar>
 
+      <Drawer
+        anchor="left"
+        open={mobileNavOpen}
+        onClose={() => setMobileNavOpen(false)}
+        // Só existe abaixo de "sm" — acima disso os links já aparecem
+        // direto na AppBar (Stack escondido em xs logo acima).
+        sx={{ display: { xs: 'block', sm: 'none' } }}
+        slotProps={{ paper: { sx: { width: 240, bgcolor: PAPEL } } }}
+      >
+        <List sx={{ pt: 2 }} onClick={() => setMobileNavOpen(false)}>
+          <MobileNavLink to="/mapa">Mapa</MobileNavLink>
+          <MobileNavLink to="/transparencia">Transparência</MobileNavLink>
+          {user?.role === 'GESTOR' && (
+            <MobileNavLink to="/painel-gestor">Painel do gestor</MobileNavLink>
+          )}
+        </List>
+        {user && (
+          <>
+            <Divider sx={{ borderColor: LINHA }} />
+            <List>
+              <ListItemButton onClick={() => void handleLogout()}>
+                <Typography sx={{ fontFamily: "'IBM Plex Sans', sans-serif", color: TINTA }}>
+                  Sair
+                </Typography>
+              </ListItemButton>
+            </List>
+          </>
+        )}
+      </Drawer>
+
       <Box component="main" sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
         {children}
       </Box>
     </Box>
+  );
+}
+
+// Item de navegação do Drawer mobile — precisa de cores próprias porque o
+// Drawer abre sobre Papel (fundo claro), diferente da AppBar sobre Ardósia
+// (fundo escuro) de onde o NavItem original foi pensado.
+function MobileNavLink({ to, children }: { to: string; children: ReactNode }) {
+  return (
+    <ListItemButton
+      component={NavLink}
+      to={to}
+      sx={{
+        fontFamily: "'IBM Plex Sans', sans-serif",
+        fontSize: '1rem',
+        fontWeight: 500,
+        color: TINTA,
+        py: 1.5,
+        '&.active': { color: SINAL },
+      }}
+    >
+      {children}
+    </ListItemButton>
   );
 }
