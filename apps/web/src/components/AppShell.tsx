@@ -105,6 +105,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <Stack direction="row" spacing={3} alignItems="center" sx={{ flex: 1 }}>
             <NavItem to="/mapa">Mapa</NavItem>
+            {/* Pública de propósito — sem checagem de user aqui, ao contrário
+                do link de painel-gestor logo abaixo (ver decisão "Dashboard
+                público (transparência)" no CLAUDE.md). */}
+            <NavItem to="/transparencia">Transparência</NavItem>
             {user?.role === 'GESTOR' && <NavItem to="/painel-gestor">Painel do gestor</NavItem>}
           </Stack>
 

@@ -35,6 +35,31 @@ type ProblemWithRelations = Prisma.ProblemGetPayload<{
   select: typeof PROBLEM_SELECT;
 }>;
 
+// Select enxuto pra getPublicStats() — só o que entra em alguma conta ou
+// média. Em especial, sem author: o endpoint por trás dessa agregação
+// (GET /transparencia/estatisticas) é público e sem guard por decisão de
+// escopo (ver CLAUDE.md, "Dashboard público (transparência)") — nunca deve
+// devolver dado de usuário individual, só números agregados.
+const STATS_SELECT = {
+  status: true,
+  createdAt: true,
+  resolvedAt: true,
+  category: { select: { name: true } },
+} satisfies Prisma.ProblemSelect;
+
+export interface PublicStats {
+  total: number;
+  abertos: number;
+  resolvidos: number;
+  percentualResolvidos: number;
+  // null quando nenhum problema foi resolvido ainda — não faz sentido
+  // calcular média de zero amostras.
+  tempoMedioResolucaoDias: number | null;
+  porCategoria: { categoria: string; total: number }[];
+}
+
+const DIA_EM_MS = 1000 * 60 * 60 * 24;
+
 @Injectable()
 export class ProblemsService {
   private readonly logger = new Logger(ProblemsService.name);
@@ -132,5 +157,60 @@ export class ProblemsService {
       `Problema resolvido: ${id} (rating=${dto.resolutionRating ?? 'n/a'})`,
     );
     return updated;
+  }
+
+  // Reaproveitado por GET /transparencia/estatisticas (dashboard público) —
+  // ver TransparenciaController. Uma query enxuta + agregação em memória, em
+  // vez de várias chamadas separadas de count/groupBy/aggregate do Prisma:
+  // pro volume esperado do teste com cidadãos (dezenas/centenas de
+  // problemas, não milhões), isso é simples e rápido o suficiente, e evita
+  // manter três queries em sincronia pra três números relacionados.
+  async getPublicStats(): Promise<PublicStats> {
+    const problems = await this.prisma.problem.findMany({
+      select: STATS_SELECT,
+    });
+
+    const total = problems.length;
+    const resolvidos = problems.filter(
+      (problem) => problem.status === ProblemStatus.RESOLVIDO,
+    ).length;
+    const abertos = total - resolvidos;
+    const percentualResolvidos =
+      total > 0 ? Math.round((resolvidos / total) * 100) : 0;
+
+    const duracoesResolucaoDias = problems
+      .filter((problem) => problem.resolvedAt !== null)
+      .map(
+        (problem) =>
+          (problem.resolvedAt!.getTime() - problem.createdAt.getTime()) /
+          DIA_EM_MS,
+      );
+    const tempoMedioResolucaoDias =
+      duracoesResolucaoDias.length > 0
+        ? Math.round(
+            (duracoesResolucaoDias.reduce((sum, dias) => sum + dias, 0) /
+              duracoesResolucaoDias.length) *
+              10,
+          ) / 10
+        : null;
+
+    const contagemPorCategoria = new Map<string, number>();
+    for (const problem of problems) {
+      const nome = problem.category.name;
+      contagemPorCategoria.set(nome, (contagemPorCategoria.get(nome) ?? 0) + 1);
+    }
+    const porCategoria = Array.from(
+      contagemPorCategoria,
+      ([categoria, categoriaTotal]) => ({ categoria, total: categoriaTotal }),
+    );
+
+    return {
+      total,
+      abertos,
+      resolvidos,
+      percentualResolvidos,
+      tempoMedioResolucaoDias,
+      porCategoria,
+    };
   }
 }

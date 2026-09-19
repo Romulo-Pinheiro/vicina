@@ -5,6 +5,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { CommentsModule } from './comments/comments.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProblemsModule } from './problems/problems.module';
+import { TransparenciaModule } from './transparencia/transparencia.module';
 import { VotesModule } from './votes/votes.module';
 
 @Module({
@@ -18,6 +19,7 @@ import { VotesModule } from './votes/votes.module';
     VotesModule,
     CommentsModule,
     CategoriesModule,
+    TransparenciaModule,
   ],
 })
 export class AppModule {}

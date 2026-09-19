@@ -5,6 +5,7 @@ import { Home } from './pages/Home';
 import { Login } from './pages/Login';
 import { Mapa } from './pages/Mapa';
 import { PainelGestor } from './pages/PainelGestor';
+import { Transparencia } from './pages/Transparencia';
 
 // Shell de rotas do app. A navegação (wordmark, links, entrar/sair) é
 // responsabilidade da AppShell, compartilhada por todas as rotas — ver
@@ -18,6 +19,7 @@ export function App() {
         <Route path="/mapa" element={<Mapa />} />
         <Route path="/problemas/:id" element={<DetalheProblema />} />
         <Route path="/painel-gestor" element={<PainelGestor />} />
+        <Route path="/transparencia" element={<Transparencia />} />
       </Routes>
     </AppShell>
   );
