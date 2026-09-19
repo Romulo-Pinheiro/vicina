@@ -5,8 +5,9 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, ProblemStatus } from '@prisma/client';
+import { Prisma, ProblemStatus, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AvaliarProblemDto } from './dto/avaliar-problem.dto';
 import { CreateProblemDto } from './dto/create-problem.dto';
 import { ResolveProblemDto } from './dto/resolve-problem.dto';
 
@@ -25,6 +26,7 @@ const PROBLEM_SELECT = {
   isAnonymous: true,
   resolvedAt: true,
   resolutionRating: true,
+  resolutionNote: true,
   createdAt: true,
   updatedAt: true,
   category: { select: { id: true, name: true } },
@@ -143,25 +145,40 @@ export class ProblemsService {
   // "Trabalho futuro"): apagar registros contradiz o objetivo de
   // transparência que sustenta a proposta — um problema mal resolvido ou
   // abandonado deve continuar visível, não desaparecer.
+  //
+  // Autorização: autor original OU qualquer GESTOR (ver CLAUDE.md,
+  // "Confirmação de resolução" — extensão do item 8). resolutionRating só é
+  // aceito do autor original; se um gestor não-autor mandar um, rejeitamos
+  // em vez de ignorar silenciosamente (mais fácil de depurar um cliente que
+  // manda campo indevido do que mascarar o problema). resolutionNote é
+  // aceito de qualquer um dos dois, sempre opcional.
   async resolve(
     id: string,
-    userId: string,
+    user: { id: string; role: Role },
     dto: ResolveProblemDto,
   ): Promise<ProblemWithRelations> {
     const problem = await this.prisma.problem.findUnique({ where: { id } });
     if (!problem) {
       throw new NotFoundException('Problema não encontrado');
     }
-    if (problem.authorId !== userId) {
+
+    const isAuthor = problem.authorId === user.id;
+    const isGestor = user.role === Role.GESTOR;
+    if (!isAuthor && !isGestor) {
       this.logger.warn(
-        `Usuário ${userId} tentou resolver o problema ${id} sem ser o autor`,
+        `Usuário ${user.id} tentou resolver o problema ${id} sem ser o autor nem gestor`,
       );
       throw new ForbiddenException(
-        'Apenas o autor do problema pode marcá-lo como resolvido',
+        'Apenas o autor do problema ou um gestor pode marcá-lo como resolvido',
       );
     }
     if (problem.status === ProblemStatus.RESOLVIDO) {
       throw new ConflictException('Este problema já está marcado como resolvido');
+    }
+    if (!isAuthor && dto.resolutionRating !== undefined) {
+      throw new ForbiddenException(
+        'Somente o autor original pode informar avaliação ao resolver',
+      );
     }
 
     const updated = await this.prisma.problem.update({
@@ -169,12 +186,68 @@ export class ProblemsService {
       data: {
         status: ProblemStatus.RESOLVIDO,
         resolvedAt: new Date(),
-        resolutionRating: dto.resolutionRating ?? null,
+        resolutionRating: isAuthor ? (dto.resolutionRating ?? null) : null,
+        resolutionNote: dto.resolutionNote ?? null,
       },
       select: PROBLEM_SELECT,
     });
     this.logger.log(
-      `Problema resolvido: ${id} (rating=${dto.resolutionRating ?? 'n/a'})`,
+      `Problema resolvido: ${id} (por=${isAuthor ? 'autor' : 'gestor'} ${user.id}, rating=${updated.resolutionRating ?? 'n/a'}, nota=${dto.resolutionNote ? 'sim' : 'não'})`,
+    );
+    return maskAnonymousAuthor(updated);
+  }
+
+  // Lista de pendências pro modal de avaliação assíncrona (ver CLAUDE.md) —
+  // chamado ao abrir o Mapa autenticado. Um critério único cobre gestor
+  // resolvendo (nunca deixa rating) e autor resolvendo sem avaliar na hora
+  // (rating opcional): resolvido + rating ainda nulo, sempre do próprio
+  // usuário logado (nunca de outro autor).
+  async findPendingEvaluation(userId: string): Promise<ProblemWithRelations[]> {
+    const problems = await this.prisma.problem.findMany({
+      where: {
+        authorId: userId,
+        status: ProblemStatus.RESOLVIDO,
+        resolutionRating: null,
+      },
+      select: PROBLEM_SELECT,
+      orderBy: { resolvedAt: 'desc' },
+    });
+    return problems.map(maskAnonymousAuthor);
+  }
+
+  // PATCH /problems/:id/avaliar — só o autor original, só depois de
+  // resolvido, só uma vez (rating ainda nulo). Endpoint separado de
+  // resolve() de propósito: é uma ação assíncrona, pode acontecer bem
+  // depois (inclusive nunca), disparada pelo modal do Mapa, não pelo
+  // fluxo síncrono de quem marcou como resolvido.
+  async avaliar(
+    id: string,
+    userId: string,
+    dto: AvaliarProblemDto,
+  ): Promise<ProblemWithRelations> {
+    const problem = await this.prisma.problem.findUnique({ where: { id } });
+    if (!problem) {
+      throw new NotFoundException('Problema não encontrado');
+    }
+    if (problem.authorId !== userId) {
+      throw new ForbiddenException(
+        'Apenas o autor original pode avaliar a resolução deste problema',
+      );
+    }
+    if (problem.status !== ProblemStatus.RESOLVIDO) {
+      throw new ConflictException('Este problema ainda não foi resolvido');
+    }
+    if (problem.resolutionRating !== null) {
+      throw new ConflictException('Este problema já foi avaliado');
+    }
+
+    const updated = await this.prisma.problem.update({
+      where: { id },
+      data: { resolutionRating: dto.resolutionRating },
+      select: PROBLEM_SELECT,
+    });
+    this.logger.log(
+      `Problema avaliado: ${id} (rating=${dto.resolutionRating}, autor=${userId})`,
     );
     return maskAnonymousAuthor(updated);
   }

@@ -94,6 +94,10 @@ model Problem {
   // Confirmação de resolução — só o autor original pode marcar.
   resolvedAt       DateTime? @map("resolved_at")
   resolutionRating Int?      @map("resolution_rating") // satisfação do autor com a solução, escala 1–5
+  // Mensagem opcional de quem resolveu (autor ou gestor) sobre a resolução —
+  // ver CLAUDE.md, "Avaliação assíncrona... e mensagem do gestor ao
+  // resolver". Exibida na página de detalhe pra qualquer visitante.
+  resolutionNote String? @map("resolution_note")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
