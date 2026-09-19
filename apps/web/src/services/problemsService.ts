@@ -13,6 +13,9 @@ export interface Problem {
   isAnonymous: boolean;
   resolvedAt: string | null;
   resolutionRating: number | null;
+  // Mensagem opcional de quem resolveu (autor ou gestor) — ver CLAUDE.md,
+  // "Avaliação assíncrona... e mensagem do gestor ao resolver".
+  resolutionNote: string | null;
   createdAt: string;
   updatedAt: string;
   category: { id: string; name: string };
@@ -51,13 +54,38 @@ export function getProblem(id: string): Promise<Problem> {
 }
 
 export interface ResolveProblemInput {
+  // Só aceito pelo backend quando quem resolve é o autor original — rejeita
+  // (403) se vier de um gestor não-autor.
   resolutionRating?: number;
+  // Aceito de qualquer um dos dois (autor ou gestor), sempre opcional.
+  resolutionNote?: string;
 }
 
-// Exige sessão e, no backend, ser o autor original (403 caso contrário).
+// Exige sessão; no backend, autor original OU gestor (403 caso contrário) —
+// ver ProblemsService.resolve.
 export function resolveProblem(
   id: string,
   data: ResolveProblemInput,
 ): Promise<Problem> {
   return apiPatch<Problem>(`/problems/${id}/resolve`, data);
+}
+
+export interface AvaliarProblemInput {
+  resolutionRating: number;
+}
+
+// Avaliação assíncrona (ver CLAUDE.md) — só o autor original, só depois de
+// resolvido, só uma vez. Usado pelo modal que o Mapa abre ao detectar
+// pendência via listPendingEvaluation().
+export function avaliarProblem(
+  id: string,
+  data: AvaliarProblemInput,
+): Promise<Problem> {
+  return apiPatch<Problem>(`/problems/${id}/avaliar`, data);
+}
+
+// Autenticado — problemas resolvidos do próprio usuário logado ainda sem
+// resolutionRating. Chamado ao montar o Mapa (ver pages/Mapa.tsx).
+export function listPendingEvaluation(): Promise<Problem[]> {
+  return apiGet<Problem[]>('/problems/pendentes-avaliacao');
 }

@@ -6,6 +6,11 @@ import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Container from '@mui/material/Container';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
 import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
@@ -15,6 +20,7 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { PieChart } from '@mui/x-charts/PieChart';
 import { useAuth } from '../auth/AuthContext';
@@ -30,7 +36,7 @@ import {
   TINTA,
 } from '../identityColors';
 import { ApiError } from '../services/apiClient';
-import { listProblems, type Problem } from '../services/problemsService';
+import { listProblems, resolveProblem, type Problem } from '../services/problemsService';
 
 const SERIF = "'Instrument Serif', serif";
 const MONO = "'IBM Plex Mono', monospace";
@@ -41,13 +47,15 @@ function formatDate(iso: string): string {
 
 // Painel do gestor — decisão de escopo (ver CLAUDE.md, "Fora de escopo" e
 // "Decisões já tomadas"): o público de teste do protótipo são cidadãos, não
-// gestores públicos. Esta página existe só pra sustentar a descrição da
+// gestores públicos. Esta página existe pra sustentar a descrição da
 // arquitetura na Seção 4 do artigo (mostrar que o papel GESTOR tem um lugar
 // na aplicação), sem validação empírica prevista e sem profundidade de
-// produto — por isso é só leitura (nenhuma ação de gestão, ex.: triagem,
-// exclusão, categorização manual, foi implementada aqui). Reaproveita o
-// GET /problems público já existente; não há endpoint dedicado a gestor no
-// backend porque nenhuma consulta ou ação exclusiva dele foi necessária.
+// produto — por isso a única ação de gestão implementada é marcar problema
+// aberto como resolvido (extensão do item 8, ver CLAUDE.md "Confirmação de
+// resolução"); triagem, exclusão, categorização manual continuam fora de
+// escopo. Reaproveita o GET /problems público já existente pra listar; a
+// ação de resolver usa o mesmo PATCH /problems/:id/resolve do fluxo do
+// autor (ver ProblemsService.resolve, que aceita autor OU gestor).
 //
 // Polimento visual (ver CLAUDE.md, "Melhorias possíveis" item 5): mesma
 // paleta/tipografia do resto do app, seguindo de perto o mockup "PAINEL DO
@@ -65,6 +73,15 @@ export function PainelGestor() {
   // gerar bastante registro.
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // Extensão do item 8 de "Melhorias possíveis" (ver CLAUDE.md, "Confirmação
+  // de resolução"): gestor também pode marcar como resolvido, sem pedir
+  // resolutionRating (isso continua exclusivo de quando o autor original
+  // resolve, na tela de detalhe) — só a mensagem opcional.
+  const [resolvingProblem, setResolvingProblem] = useState<Problem | null>(null);
+  const [resolutionNote, setResolutionNote] = useState('');
+  const [resolveSubmitting, setResolveSubmitting] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
 
   const isGestor = user?.role === 'GESTOR';
 
@@ -104,6 +121,37 @@ export function PainelGestor() {
   function handleChangeRowsPerPage(event: ChangeEvent<HTMLInputElement>): void {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
+  }
+
+  function closeResolveDialog(): void {
+    setResolvingProblem(null);
+    setResolutionNote('');
+    setResolveError(null);
+  }
+
+  async function handleResolveSubmit(): Promise<void> {
+    if (!resolvingProblem) return;
+    setResolveError(null);
+    setResolveSubmitting(true);
+    try {
+      // Sem resolutionRating de propósito: gestor nunca avalia na hora (ver
+      // CLAUDE.md) — o backend rejeitaria mesmo se mandássemos.
+      const updated = await resolveProblem(resolvingProblem.id, {
+        resolutionNote: resolutionNote.trim() ? resolutionNote.trim() : undefined,
+      });
+      setProblems((current) =>
+        current ? current.map((p) => (p.id === updated.id ? updated : p)) : current,
+      );
+      closeResolveDialog();
+    } catch (error) {
+      setResolveError(
+        error instanceof ApiError
+          ? error.message
+          : 'Não foi possível marcar como resolvido.',
+      );
+    } finally {
+      setResolveSubmitting(false);
+    }
   }
 
   if (authLoading) {
@@ -248,6 +296,7 @@ export function PainelGestor() {
                       <HeadCell align="right">Comentários</HeadCell>
                       <HeadCell>Autor</HeadCell>
                       <HeadCell>Criado em</HeadCell>
+                      <HeadCell>Ações</HeadCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -284,11 +333,23 @@ export function PainelGestor() {
                         <TableCell sx={{ fontFamily: MONO, fontSize: '0.8125rem' }}>
                           {formatDate(problem.createdAt)}
                         </TableCell>
+                        <TableCell>
+                          {problem.status === 'ABERTO' && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="success"
+                              onClick={() => setResolvingProblem(problem)}
+                            >
+                              Resolver
+                            </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                     {problems.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                        <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                           <Typography variant="body2" sx={{ color: TEXTO_SECUNDARIO }}>
                             Nenhum problema registrado ainda.
                           </Typography>
@@ -314,6 +375,46 @@ export function PainelGestor() {
           </>
         )}
       </Box>
+
+      <Dialog open={resolvingProblem !== null} onClose={closeResolveDialog} fullWidth maxWidth="xs">
+        <DialogTitle>Marcar como resolvido</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            {resolvingProblem?.title}
+          </DialogContentText>
+          <DialogContentText sx={{ mb: 2 }}>
+            Mensagem opcional sobre a resolução, visível pra quem acompanha o
+            problema. Sem avaliação por estrelas aqui — essa parte continua
+            exclusiva do autor original, na tela de detalhe do problema.
+          </DialogContentText>
+          {resolveError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {resolveError}
+            </Alert>
+          )}
+          <TextField
+            label="Mensagem sobre a resolução (opcional)"
+            fullWidth
+            multiline
+            minRows={2}
+            value={resolutionNote}
+            onChange={(event) => setResolutionNote(event.target.value)}
+            disabled={resolveSubmitting}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeResolveDialog} disabled={resolveSubmitting}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => void handleResolveSubmit()}
+            disabled={resolveSubmitting}
+          >
+            {resolveSubmitting ? <CircularProgress size={20} color="inherit" /> : 'Confirmar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }

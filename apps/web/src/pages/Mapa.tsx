@@ -16,6 +16,7 @@ import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
+import Rating from '@mui/material/Rating';
 import Select, { type SelectChangeEvent } from '@mui/material/Select';
 import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
@@ -39,7 +40,13 @@ import { FALLBACK_CENTER, FALLBACK_ZOOM, OSM_ATTRIBUTION, OSM_TILE_URL } from '.
 import { getPinIcon } from '../mapPinIcon';
 import { ApiError } from '../services/apiClient';
 import { listCategories, type Category } from '../services/categoriesService';
-import { createProblem, listProblems, type Problem } from '../services/problemsService';
+import {
+  avaliarProblem,
+  createProblem,
+  listPendingEvaluation,
+  listProblems,
+  type Problem,
+} from '../services/problemsService';
 
 // FALLBACK_CENTER (Feira de Santana, BA — cidade-piloto, ver CLAUDE.md) é
 // usado só quando ainda não há nenhum problema cadastrado (sem pontos pra
@@ -67,6 +74,16 @@ export function Mapa() {
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Avaliação assíncrona estilo Uber/iFood (ver CLAUDE.md) — gatilho passivo
+  // ao abrir o Mapa autenticado, sem push/e-mail (fora de escopo). null =
+  // nada pendente (ou ainda não checou); guarda só o primeiro item — se
+  // houver mais de um problema pendente de avaliação, não encadeia, o
+  // próximo login pergunta de novo (ver GET /problems/pendentes-avaliacao).
+  const [pendingEvaluation, setPendingEvaluation] = useState<Problem | null>(null);
+  const [evaluationRating, setEvaluationRating] = useState<number | null>(null);
+  const [evaluationSubmitting, setEvaluationSubmitting] = useState(false);
+  const [evaluationError, setEvaluationError] = useState<string | null>(null);
+
   useEffect(() => {
     Promise.all([listProblems(), listCategories()])
       .then(([problemsResult, categoriesResult]) => {
@@ -82,6 +99,19 @@ export function Mapa() {
       });
   }, []);
 
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+    listPendingEvaluation()
+      .then((pending) => setPendingEvaluation(pending[0] ?? null))
+      .catch(() => {
+        // Silencioso de propósito: isso é um lembrete oportunista, não uma
+        // função crítica da tela — um erro aqui não deve travar o mapa nem
+        // exigir um Alert dedicado.
+      });
+  }, [user]);
+
   function handleAddClick(): void {
     if (!user) {
       navigate('/login');
@@ -93,6 +123,35 @@ export function Mapa() {
   function handleMapClick(latlng: LatLng): void {
     setPendingLocation(latlng);
     setPlacing(false);
+  }
+
+  function dismissEvaluation(): void {
+    // "Agora não" — fecha sem salvar nada, sem marcar dispensa. Reaparece no
+    // próximo login (trade-off aceito de escopo de protótipo, ver
+    // CLAUDE.md: não implementar dispensa permanente).
+    setPendingEvaluation(null);
+    setEvaluationRating(null);
+    setEvaluationError(null);
+  }
+
+  async function handleEvaluationSubmit(): Promise<void> {
+    if (!pendingEvaluation || evaluationRating === null) {
+      return;
+    }
+    setEvaluationError(null);
+    setEvaluationSubmitting(true);
+    try {
+      await avaliarProblem(pendingEvaluation.id, { resolutionRating: evaluationRating });
+      dismissEvaluation();
+    } catch (error) {
+      setEvaluationError(
+        error instanceof ApiError
+          ? error.message
+          : 'Não foi possível registrar sua avaliação agora.',
+      );
+    } finally {
+      setEvaluationSubmitting(false);
+    }
   }
 
   function closeDialog(): void {
@@ -359,6 +418,40 @@ export function Mapa() {
         onClose={() => setSuccessMessage(null)}
         message={successMessage}
       />
+
+      {/* Avaliação assíncrona (ver useEffect acima) — sem onClose ligado a
+          nada: só fecha pelos botões explícitos ("Agora não" ou avaliar),
+          não clicando fora nem com Esc, pra não passar batido sem querer. */}
+      <Dialog open={pendingEvaluation !== null} maxWidth="xs" fullWidth>
+        <DialogTitle>Como foi a resolução?</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            {pendingEvaluation?.title}
+          </DialogContentText>
+          {evaluationError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {evaluationError}
+            </Alert>
+          )}
+          <Rating
+            value={evaluationRating}
+            onChange={(_event, newValue) => setEvaluationRating(newValue)}
+            size="large"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={dismissEvaluation} disabled={evaluationSubmitting}>
+            Agora não
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => void handleEvaluationSubmit()}
+            disabled={evaluationSubmitting || evaluationRating === null}
+          >
+            {evaluationSubmitting ? <CircularProgress size={20} color="inherit" /> : 'Avaliar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

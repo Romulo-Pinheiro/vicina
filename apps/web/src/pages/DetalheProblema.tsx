@@ -58,6 +58,7 @@ export function DetalheProblema() {
 
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
   const [resolutionRating, setResolutionRating] = useState<number | null>(null);
+  const [resolutionNote, setResolutionNote] = useState('');
   const [resolveSubmitting, setResolveSubmitting] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
 
@@ -152,16 +153,29 @@ export function DetalheProblema() {
     }
   }
 
+  function closeResolveDialog(): void {
+    setResolveDialogOpen(false);
+    setResolutionRating(null);
+    setResolutionNote('');
+    setResolveError(null);
+  }
+
   async function handleResolveSubmit(): Promise<void> {
     if (!id) return;
     setResolveError(null);
     setResolveSubmitting(true);
     try {
       const updated = await resolveProblem(id, {
-        resolutionRating: resolutionRating ?? undefined,
+        // Rating só vai quando quem resolve é o autor original — o backend
+        // rejeita (403) se um gestor não-autor mandar um (ver
+        // ProblemsService.resolve). isAuthor é calculado mais abaixo no
+        // corpo do componente, mas já está disponível aqui: essa função só
+        // roda num clique posterior ao render que a define.
+        resolutionRating: isAuthor ? (resolutionRating ?? undefined) : undefined,
+        resolutionNote: resolutionNote.trim() ? resolutionNote.trim() : undefined,
       });
       setProblem(updated);
-      setResolveDialogOpen(false);
+      closeResolveDialog();
     } catch (error) {
       setResolveError(
         error instanceof ApiError
@@ -202,7 +216,12 @@ export function DetalheProblema() {
   }
 
   const isAuthor = user?.id === problem.author.id;
-  const canResolve = isAuthor && problem.status === 'ABERTO';
+  // Autor original OU gestor (ver CLAUDE.md, "Confirmação de resolução" —
+  // extensão do item 8). O dialog de resolução decide, com base em
+  // isAuthor, se mostra o campo de avaliação (só o autor original avalia
+  // na hora — ver handleResolveSubmit).
+  const isGestor = user?.role === 'GESTOR';
+  const canResolve = (isAuthor || isGestor) && problem.status === 'ABERTO';
 
   return (
     <Container maxWidth="sm">
@@ -245,6 +264,14 @@ export function DetalheProblema() {
                 </Typography>
                 <Rating value={problem.resolutionRating} readOnly size="small" />
               </Stack>
+            )}
+            {/* Mensagem de quem resolveu (autor ou gestor), pra qualquer
+                visitante — ver CLAUDE.md, "mensagem opcional... ao
+                resolver". */}
+            {problem.resolutionNote && (
+              <Alert severity="success" variant="outlined" sx={{ mt: 1 }}>
+                {problem.resolutionNote}
+              </Alert>
             )}
           </Box>
         )}
@@ -368,29 +395,42 @@ export function DetalheProblema() {
         )}
       </Box>
 
-      <Dialog
-        open={resolveDialogOpen}
-        onClose={() => setResolveDialogOpen(false)}
-        fullWidth
-        maxWidth="xs"
-      >
+      <Dialog open={resolveDialogOpen} onClose={closeResolveDialog} fullWidth maxWidth="xs">
         <DialogTitle>Marcar como resolvido</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            Avaliação opcional da solução (1 a 5 estrelas).
+            {isAuthor
+              ? 'Avaliação opcional da solução (1 a 5 estrelas) e uma mensagem opcional sobre a resolução.'
+              : 'Mensagem opcional sobre a resolução, visível pra quem acompanha o problema.'}
           </DialogContentText>
           {resolveError && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {resolveError}
             </Alert>
           )}
-          <Rating
-            value={resolutionRating}
-            onChange={(_event, newValue) => setResolutionRating(newValue)}
+          {/* Avaliação (estrelas) só quando quem resolve é o autor original
+              — gestor não avalia na hora (ver CLAUDE.md, "Confirmação de
+              resolução"). O backend rejeitaria um rating vindo de gestor
+              não-autor mesmo que a UI deixasse passar. */}
+          {isAuthor && (
+            <Rating
+              value={resolutionRating}
+              onChange={(_event, newValue) => setResolutionRating(newValue)}
+              sx={{ mb: 2 }}
+            />
+          )}
+          <TextField
+            label="Mensagem sobre a resolução (opcional)"
+            fullWidth
+            multiline
+            minRows={2}
+            value={resolutionNote}
+            onChange={(event) => setResolutionNote(event.target.value)}
+            disabled={resolveSubmitting}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setResolveDialogOpen(false)} disabled={resolveSubmitting}>
+          <Button onClick={closeResolveDialog} disabled={resolveSubmitting}>
             Cancelar
           </Button>
           <Button
