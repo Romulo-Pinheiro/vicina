@@ -30,23 +30,4 @@ export const theme = createTheme({
   shape: {
     borderRadius: 10,
   },
-  components: {
-    // O hover default do MUI pra um botão "contained" escurece usando
-    // palette.primary.dark (aqui, #C44F22) — mas a identidade visual manda
-    // o oposto pro botão primário (.btn-p:hover no doc): clareia pra
-    // Sinalização clara. Sem este override central, cada botão "contained"
-    // precisaria repetir '&:hover':{bgcolor:SINAL_CLARA} na mão (só
-    // Home.tsx/AppShell.tsx faziam isso até agora — o resto do app, como o
-    // "Ver detalhes" do popup do mapa ou o "Confirmar" dos dialogs, ficava
-    // com o escurecimento default, destoando do laranja da marca).
-    MuiButton: {
-      styleOverrides: {
-        containedPrimary: {
-          '&:hover': {
-            backgroundColor: '#FF8F63', // Sinalização clara
-          },
-        },
-      },
-    },
-  },
 });
