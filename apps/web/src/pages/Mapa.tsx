@@ -309,6 +309,17 @@ export function Mapa() {
           '.leaflet-popup-close-button:hover': {
             color: TINTA,
           },
+          // O CSS default do Leaflet estiliza QUALQUER <a> dentro do
+          // container do mapa (`.leaflet-container a{color:#0078A8}`, um
+          // azul-petróleo) — como "Ver detalhes" é um RouterLink (um <a> de
+          // verdade), essa regra bate com especificidade maior que a classe
+          // única do MUI (.MuiButton-containedPrimary) e pinta o texto de
+          // #0078A8 por cima do fundo laranja em vez do branco esperado.
+          // Precisa de duas classes aqui (não uma) pra empatar/vencer o
+          // elemento+classe do Leaflet na especificidade.
+          '.leaflet-popup-content .MuiButton-containedPrimary': {
+            color: PAPEL,
+          },
         }}
       />
       <MapContainer
