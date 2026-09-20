@@ -1,10 +1,13 @@
 import { useState, type FormEvent, type SyntheticEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import Container from '@mui/material/Container';
+import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
@@ -28,6 +31,7 @@ export function Login() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -112,7 +116,7 @@ export function Login() {
             />
             <TextField
               label="Senha"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               fullWidth
               required
               margin="normal"
@@ -121,6 +125,23 @@ export function Login() {
               onChange={(event) => setPassword(event.target.value)}
               disabled={submitting}
               helperText={mode === 'register' ? 'Mínimo de 8 caracteres' : undefined}
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <IconButton
+                      onClick={() => setShowPassword((current) => !current)}
+                      edge="end"
+                      size="small"
+                      // tabIndex -1: alternar visibilidade não é uma parada
+                      // natural do fluxo de tab entre email → senha → entrar.
+                      tabIndex={-1}
+                      aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                    >
+                      {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                    </IconButton>
+                  ),
+                },
+              }}
             />
             <Button
               type="submit"
