@@ -137,5 +137,14 @@ Ordem de prioridade combinada (cada item facilita o próximo):
 6. Dashboard público de uma cidade só (ver decisão acima).
 7. Checagem de responsividade mobile (Fab, dialog de registro, mapa) — maioria dos cidadãos vai testar pelo celular.
 8. **[FEITO] Gestor também pode marcar problema como resolvido**, com avaliação assíncrona estilo Uber/iFood (modal ao abrir o Mapa) e mensagem opcional do gestor ao resolver (ver decisões acima).
-9. **Repensar o fluxo de adicionar problema no mapa** — atual (Fab → aviso → clique no mapa → dialog) depende de o usuário lembrar do aviso entre dois cliques desconectados. Direção proposta a validar antes de implementar: pin arrastável aparecendo imediatamente ao clicar no Fab (centralizado no mapa ou na geolocalização do usuário, se permitida), confirmação após arrastar até o ponto exato — sem clique intermediário "no escuro".
+9. **[FEITO] Repensar o fluxo de adicionar problema no mapa** — atual (Fab → aviso → clique no mapa → dialog) depende de o usuário lembrar do aviso entre dois cliques desconectados. **Padrão escolhido: pin fixo no centro da viewport + mapa se move por baixo** (mesmo padrão do "soltar pin" do Google Maps/pin de embarque do Uber), não um marcador arrastável — decisão validada explicitamente antes de implementar. Motivo: em toque (mobile, canal principal de teste), arrastar um marcador pequeno tem o problema do dedo cobrir o próprio alvo; com o pin fixo e o mapa se movendo, o usuário sempre vê a ponta do pin livre. Mesmo padrão pra desktop também (sem branch de comportamento por dispositivo) — funciona igualmente bem com mouse e evita manter dois fluxos de UI diferentes perto do prazo de entrega.
+
+**Fluxo definido:**
+1. Toca/clica no Fab de adicionar problema.
+2. Mapa entra em "modo de posicionamento": pin fixo (elemento CSS sobreposto, não uma camada do Leaflet) centralizado na viewport; remove o aviso/alerta atual por completo.
+3. Usuário arrasta/dá zoom no mapa até a ponta do pin apontar pro lugar certo.
+4. Barra fixa com "Confirmar localização" e "Cancelar".
+5. Ao confirmar, captura as coordenadas do centro do mapa naquele momento e abre o dialog existente (título, descrição, categoria, anonimato) já com a localização definida. Cancelar o dialog depois sai do modo de posicionamento sem criar nada.
+
+Sem geocodificação reversa (endereço em texto sob o pin) nessa rodada — fora do problema que está sendo resolvido, registrado como possível melhoria futura.
 10. Upload de foto no registro do problema (ver decisão acima) — **corte obrigatório**: se não estiver pronto quando chegar a data de recrutamento dos participantes, descartar; não pode atrasar o teste com cidadãos.
