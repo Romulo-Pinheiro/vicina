@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -17,6 +17,17 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useAuth } from '../auth/AuthContext';
+import { getCategoryIcon } from '../categoryIcons';
+import {
+  ARDOSIA,
+  ARDOSIA_TINTA,
+  LINHA,
+  PAPEL,
+  SINAL_TINTA,
+  SINAL_TINTA_TEXTO,
+  TEXTO_SECUNDARIO,
+  TINTA,
+} from '../identityColors';
 import { RESOLUTION_NOTE_TEMPLATE } from '../resolutionNoteTemplate';
 import { ApiError } from '../services/apiClient';
 import {
@@ -32,11 +43,47 @@ import {
 } from '../services/problemsService';
 import { addVote, checkVoted, removeVote } from '../services/votesService';
 
+// Mesmas famílias literais usadas em pages/Mapa.tsx/PainelGestor.tsx — sem
+// módulo compartilhado de propósito (ver comentário equivalente em
+// Mapa.tsx), é assim que o resto do app já referencia essas duas famílias.
+const SERIF = "'Instrument Serif', serif";
+const MONO = "'IBM Plex Mono', monospace";
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('pt-BR', {
     dateStyle: 'short',
     timeStyle: 'short',
   });
+}
+
+// Chip de status com as cores oficiais (Sinalização=aberto, Ardósia=
+// resolvido) — mesmo par já usado na tabela do PainelGestor/Transparencia e
+// no popup do mapa (ver Mapa.tsx), nunca as cores genéricas warning/success
+// do MUI.
+function statusChipSx(status: 'ABERTO' | 'RESOLVIDO') {
+  return status === 'ABERTO'
+    ? { backgroundColor: SINAL_TINTA, color: SINAL_TINTA_TEXTO, fontWeight: 600 }
+    : { backgroundColor: ARDOSIA, color: PAPEL, fontWeight: 600 };
+}
+
+// Rótulo discreto de seção (Descrição/Comentários/Resolução) — IBM Plex
+// Sans, maiúsculo, letter-spacing leve, ver "Peças da interface" na
+// identidade visual (mesmo tratamento do eyebrow do doc).
+function SectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <Typography
+      sx={{
+        fontSize: '0.72rem',
+        fontWeight: 600,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+        color: TEXTO_SECUNDARIO,
+        mb: 1,
+      }}
+    >
+      {children}
+    </Typography>
+  );
 }
 
 export function DetalheProblema() {
@@ -223,6 +270,7 @@ export function DetalheProblema() {
   // na hora — ver handleResolveSubmit).
   const isGestor = user?.role === 'GESTOR';
   const canResolve = (isAuthor || isGestor) && problem.status === 'ABERTO';
+  const CategoryIcon = getCategoryIcon(problem.category.name);
 
   return (
     <Container maxWidth="sm">
@@ -231,19 +279,29 @@ export function DetalheProblema() {
           ‹ Voltar ao mapa
         </Button>
 
-        <Typography variant="h4" component="h1" gutterBottom>
+        <Typography
+          component="h1"
+          sx={{ fontFamily: SERIF, fontSize: { xs: '2rem', sm: '2.5rem' }, fontWeight: 400, lineHeight: 1.15, mb: 1.5 }}
+        >
           {problem.title}
         </Typography>
 
-        <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-          <Chip label={problem.category.name} size="small" />
+        <Stack direction="row" spacing={1} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
+          <Chip
+            icon={<CategoryIcon fontSize="small" />}
+            label={problem.category.name}
+            size="small"
+            variant="outlined"
+            sx={{ borderColor: LINHA, color: TINTA, '& .MuiChip-icon': { color: TINTA } }}
+          />
           <Chip
             label={problem.status === 'ABERTO' ? 'Aberto' : 'Resolvido'}
             size="small"
-            color={problem.status === 'ABERTO' ? 'warning' : 'success'}
+            sx={statusChipSx(problem.status)}
           />
         </Stack>
 
+        <SectionLabel>Descrição</SectionLabel>
         <Typography variant="body1" sx={{ mb: 2 }}>
           {problem.description}
         </Typography>
@@ -254,35 +312,42 @@ export function DetalheProblema() {
         </Typography>
 
         {problem.status === 'RESOLVIDO' && problem.resolvedAt && (
-          <Box sx={{ mt: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              Resolvido em {formatDate(problem.resolvedAt)}
-            </Typography>
-            {problem.resolutionRating && (
-              <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 0.5 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Avaliação do autor:
-                </Typography>
-                <Rating value={problem.resolutionRating} readOnly size="small" />
-              </Stack>
-            )}
-            {/* Comentário opcional do autor ao avaliar (estilo Uber/iFood,
-                ver Mapa.tsx) — pra qualquer visitante, igual à resolutionNote
-                abaixo. Diferente dela: aqui é o retorno de quem avaliou
-                depois, não a mensagem de quem resolveu. */}
-            {problem.resolutionFeedback && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontStyle: 'italic' }}>
-                "{problem.resolutionFeedback}"
+          <Box sx={{ mt: 3 }}>
+            <SectionLabel>Resolução</SectionLabel>
+            {/* Agrupa tudo que hoje ficava solto (data, mensagem de quem
+                resolveu, estrelas, retorno do autor) num único bloco com
+                leve tingimento em Ardósia — mesmo tratamento já usado nos
+                tiles "resolvidos" do PainelGestor/Transparencia (ARDOSIA_TINTA
+                de fundo, ARDOSIA no texto). */}
+            <Box sx={{ backgroundColor: ARDOSIA_TINTA, borderRadius: '14px', p: 2.25 }}>
+              <Typography variant="body2" sx={{ color: ARDOSIA, fontWeight: 600 }}>
+                Resolvido em {formatDate(problem.resolvedAt)}
               </Typography>
-            )}
-            {/* Mensagem de quem resolveu (autor ou gestor), pra qualquer
-                visitante — ver CLAUDE.md, "mensagem opcional... ao
-                resolver". */}
-            {problem.resolutionNote && (
-              <Alert severity="success" variant="outlined" sx={{ mt: 1 }}>
-                {problem.resolutionNote}
-              </Alert>
-            )}
+              {/* Mensagem de quem resolveu (autor ou gestor) — ver
+                  CLAUDE.md, "mensagem opcional... ao resolver". */}
+              {problem.resolutionNote && (
+                <Typography variant="body2" sx={{ mt: 1, color: TINTA }}>
+                  {problem.resolutionNote}
+                </Typography>
+              )}
+              {problem.resolutionRating && (
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1.5 }}>
+                  <Typography variant="body2" sx={{ color: ARDOSIA }}>
+                    Avaliação do autor:
+                  </Typography>
+                  <Rating value={problem.resolutionRating} readOnly size="small" />
+                </Stack>
+              )}
+              {/* Comentário opcional do autor ao avaliar (estilo Uber/iFood,
+                  ver Mapa.tsx) — pra qualquer visitante. Diferente da
+                  resolutionNote acima: aqui é o retorno de quem avaliou
+                  depois, não a mensagem de quem resolveu. */}
+              {problem.resolutionFeedback && (
+                <Typography variant="body2" sx={{ mt: 1, color: ARDOSIA, fontStyle: 'italic' }}>
+                  "{problem.resolutionFeedback}"
+                </Typography>
+              )}
+            </Box>
           </Box>
         )}
 
@@ -303,8 +368,11 @@ export function DetalheProblema() {
             pra ação primária em mobile; o Button "medium" default do MUI
             fica em ~36px, curto demais pro dedo. */}
         <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap', rowGap: 1 }}>
+          {/* Destaque em Sinalização (contained) quando o usuário JÁ votou —
+              o voto em si é o resultado a reforçar visualmente, não o
+              convite pra votar; sem voto ainda, o botão fica outlined. */}
           <Button
-            variant={voted ? 'outlined' : 'contained'}
+            variant={voted ? 'contained' : 'outlined'}
             onClick={() => void handleToggleVote()}
             disabled={voteSubmitting}
             sx={{ minHeight: 44 }}
@@ -332,20 +400,17 @@ export function DetalheProblema() {
 
         <Divider sx={{ my: 3 }} />
 
-        <Typography variant="h6" gutterBottom>
-          Comentários ({comments.length})
-        </Typography>
+        <SectionLabel>Comentários ({comments.length})</SectionLabel>
 
         <Stack spacing={2} sx={{ mb: 3 }}>
           {comments.map((comment) => (
             <Box key={comment.id}>
-              <Stack direction="row" justifyContent="space-between" alignItems="baseline">
-                <Typography variant="subtitle2">{comment.user.name}</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {formatDate(comment.createdAt)}
-                </Typography>
-              </Stack>
-              <Typography variant="body2">{comment.text}</Typography>
+              <Typography sx={{ fontFamily: MONO, fontSize: '0.75rem', color: TEXTO_SECUNDARIO }}>
+                {comment.user.name} · {formatDate(comment.createdAt)}
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 0.5 }}>
+                {comment.text}
+              </Typography>
               {user?.id === comment.user.id && (
                 <Button
                   size="small"
