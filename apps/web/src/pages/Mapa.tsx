@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -22,20 +22,14 @@ import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { LatLngBounds, type LatLng } from 'leaflet';
-import {
-  MapContainer,
-  Marker,
-  Popup,
-  TileLayer,
-  useMap,
-  useMapEvents,
-} from 'react-leaflet';
+import { LatLngBounds, type LatLng, type Map as LeafletMap } from 'leaflet';
+import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import '../leaflet-icon-fix';
 import { useAuth } from '../auth/AuthContext';
 import { getCategoryIcon } from '../categoryIcons';
 import { GeocoderControl } from '../components/GeocoderControl';
+import { ARDOSIA, ARDOSIA_PROFUNDA, PAPEL, SINAL, SINAL_ESCURA } from '../identityColors';
 import { FALLBACK_CENTER, FALLBACK_ZOOM, OSM_ATTRIBUTION, OSM_TILE_URL } from '../mapConfig';
 import { getPinIcon } from '../mapPinIcon';
 import { ApiError } from '../services/apiClient';
@@ -64,9 +58,17 @@ export function Mapa() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Modo "colocando um problema": ativado pelo Fab, desativado ao
-  // cancelar/concluir o cadastro. Enquanto ativo, o próximo clique no mapa
-  // vira a localização do novo problema (ver MapClickHandler abaixo).
+  // Ref pro Map do Leaflet (não pro <div>): react-leaflet v5 encaminha o ref
+  // do MapContainer pra instância do mapa (ver node_modules/react-leaflet/
+  // lib/MapContainer.js) — é assim que handleConfirmPlacing lê o centro
+  // exato da viewport sem precisar de um componente filho com useMap() só
+  // pra isso.
+  const mapRef = useRef<LeafletMap | null>(null);
+
+  // Modo "colocando um problema" (padrão "soltar pin" do Google Maps, ver
+  // CLAUDE.md): ativado pelo Fab, o pin fica fixo no centro da viewport (via
+  // CSS, ver PlacementPinOverlay) e é o mapa que se move por baixo dele —
+  // não é mais um clique direto no mapa que define a posição.
   const [placing, setPlacing] = useState(false);
   const [pendingLocation, setPendingLocation] = useState<LatLng | null>(null);
 
@@ -127,8 +129,20 @@ export function Mapa() {
     setPlacing(true);
   }
 
-  function handleMapClick(latlng: LatLng): void {
-    setPendingLocation(latlng);
+  function handleCancelPlacing(): void {
+    setPlacing(false);
+  }
+
+  function handleConfirmPlacing(): void {
+    const map = mapRef.current;
+    if (!map) {
+      return;
+    }
+    // getCenter() lê o centro atual da viewport no momento do clique — é
+    // exatamente o ponto que o PlacementPinOverlay aponta visualmente,
+    // porque o overlay fica fixo no centro geométrico do mesmo container do
+    // MapContainer (ver sx do Box de overlay mais abaixo).
+    setPendingLocation(map.getCenter());
     setPlacing(false);
   }
 
@@ -237,18 +251,14 @@ export function Mapa() {
     // (o <main> dela), não a viewport inteira. Ver components/AppShell.tsx.
     <Box sx={{ position: 'relative', height: '100%', width: '100%' }}>
       <MapContainer
+        ref={mapRef}
         center={FALLBACK_CENTER}
         zoom={FALLBACK_ZOOM}
-        style={{
-          height: '100%',
-          width: '100%',
-          cursor: placing ? 'crosshair' : undefined,
-        }}
+        style={{ height: '100%', width: '100%' }}
       >
         <TileLayer url={OSM_TILE_URL} attribution={OSM_ATTRIBUTION} />
         <GeocoderControl />
         <FitBounds problems={problems} />
-        <MapClickHandler active={placing} onMapClick={handleMapClick} />
 
         {problems.map((problem) => {
           const CategoryIcon = getCategoryIcon(problem.category.name);
@@ -300,34 +310,54 @@ export function Mapa() {
         )}
       </MapContainer>
 
+      {placing && <PlacementPinOverlay />}
+
       {placing && (
-        <Alert
-          severity="info"
+        // Barra fixa (não um Alert): substitui por completo o aviso antigo
+        // de "clique no mapa" — aqui não é instrução de uma ação única, é o
+        // controle da etapa (confirmar/cancelar), por isso fica ancorada
+        // embaixo, igual ao padrão de "soltar pin" do Google Maps/Uber.
+        <Box
           sx={{
             position: 'absolute',
-            // 68px: limpa a barra de busca do geocoder (44px de altura +
-            // ~10px de margem padrão do Leaflet pros seus controles, ver
-            // GeocoderControl.tsx) — com 16px os dois se sobrepunham,
-            // confirmado em captura de tela em ~375px e ~768px de largura.
-            top: 68,
-            left: '50%',
-            transform: 'translateX(-50%)',
+            left: 0,
+            right: 0,
+            bottom: 0,
             zIndex: 1000,
-            maxWidth: 'calc(100% - 32px)',
+            bgcolor: ARDOSIA,
+            borderTop: `1px solid ${ARDOSIA_PROFUNDA}`,
+            px: 2,
+            py: 1.5,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 1,
           }}
         >
-          Clique no mapa pra marcar onde é o problema
-        </Alert>
+          <Typography variant="body2" sx={{ color: PAPEL, textAlign: 'center' }}>
+            Mova o mapa até a ponta do pin apontar pro local do problema
+          </Typography>
+          <Stack direction="row" spacing={1.5}>
+            <Button onClick={handleCancelPlacing} sx={{ color: PAPEL }}>
+              Cancelar
+            </Button>
+            <Button variant="contained" color="primary" onClick={handleConfirmPlacing}>
+              Confirmar localização
+            </Button>
+          </Stack>
+        </Box>
       )}
 
-      <Fab
-        color="primary"
-        onClick={handleAddClick}
-        sx={{ position: 'absolute', bottom: 24, right: 24, zIndex: 1000, fontSize: 24 }}
-        aria-label="Registrar novo problema"
-      >
-        +
-      </Fab>
+      {!placing && (
+        <Fab
+          color="primary"
+          onClick={handleAddClick}
+          sx={{ position: 'absolute', bottom: 24, right: 24, zIndex: 1000, fontSize: 24 }}
+          aria-label="Registrar novo problema"
+        >
+          +
+        </Fab>
+      )}
 
       <Dialog
         open={pendingLocation !== null}
@@ -517,24 +547,59 @@ export function Mapa() {
   );
 }
 
-// Componente auxiliar: useMapEvents só funciona dentro de <MapContainer>,
-// então o listener de clique precisa viver num filho dele, não no Mapa
-// diretamente.
-function MapClickHandler({
-  active,
-  onMapClick,
-}: {
-  active: boolean;
-  onMapClick: (latlng: LatLng) => void;
-}) {
-  useMapEvents({
-    click(event) {
-      if (active) {
-        onMapClick(event.latlng);
-      }
-    },
-  });
-  return null;
+// Path do "Pin com V" (com o entalhe — ao contrário do marcador de
+// problema em mapPinIcon.tsx, que omite o entalhe pra não virar ruído
+// repetido dezenas de vezes no mapa) — ver
+// docs/Vicina_Identidade_Visual.html, seção "SÍMBOLOS". Nesse momento ainda
+// não há categoria escolhida, então o símbolo genérico da marca (não um
+// ícone de categoria) é o que faz sentido.
+const PLACEMENT_PIN_PATH =
+  'M100 178 C68 138 42 112 42 84 A58 58 0 0 1 158 84 C158 112 132 138 100 178 Z';
+const PLACEMENT_PIN_NOTCH_PATH = 'M74 56 L100 118 L126 56 L146 56 L100 152 L54 56 Z';
+
+// viewBox recortado exatamente no bounding box do desenho (pin + sombra) —
+// não "0 0 200 200" como em mapPinIcon.tsx. Aqui a proporção largura×altura
+// do <svg> renderizado tem que bater exatamente com a do viewBox (sem o
+// letterboxing do preserveAspectRatio "meet" padrão), porque o translate
+// logo abaixo usa a fração exata da ponta do pin dentro da própria caixa
+// pra centralizar o alvo. x: corpo 42–158, sombra desloca +7 → 42–165.
+// y: topo do círculo 84-58=26, ponta 178, sombra desloca +4 → 26–182.
+const PLACEMENT_PIN_VIEWBOX = '42 26 123 156';
+// Fração da ponta do pin (100,178) dentro desse viewBox — translate() em %
+// é relativo ao próprio tamanho do elemento, então isso alinha a ponta
+// exatamente no centro do container independente do tamanho em px
+// escolhido abaixo.
+const PLACEMENT_PIN_TIP_X_PCT = ((100 - 42) / 123) * 100; // ≈ 47.15%
+const PLACEMENT_PIN_TIP_Y_PCT = ((178 - 26) / 156) * 100; // ≈ 97.44%
+const PLACEMENT_PIN_WIDTH = 44;
+const PLACEMENT_PIN_HEIGHT = PLACEMENT_PIN_WIDTH * (156 / 123);
+
+// Pin fixo no centro da viewport — elemento CSS sobreposto ao mapa (não um
+// Marker do Leaflet, que se moveria com o pan): é o mapa que se move por
+// baixo dele durante o "modo de posicionamento" (ver CLAUDE.md, decisão
+// "Repensar o fluxo de adicionar problema no mapa"). Cor Sinalização, a
+// mesma de status "aberto": ainda não há categoria definida nesse momento.
+function PlacementPinOverlay() {
+  return (
+    <Box
+      aria-hidden="true"
+      data-testid="placement-pin"
+      sx={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        zIndex: 1000,
+        pointerEvents: 'none',
+        transform: `translate(-${PLACEMENT_PIN_TIP_X_PCT}%, -${PLACEMENT_PIN_TIP_Y_PCT}%)`,
+      }}
+    >
+      <svg width={PLACEMENT_PIN_WIDTH} height={PLACEMENT_PIN_HEIGHT} viewBox={PLACEMENT_PIN_VIEWBOX}>
+        <path d={PLACEMENT_PIN_PATH} fill={SINAL_ESCURA} transform="translate(7,4)" />
+        <path d={PLACEMENT_PIN_PATH} fill={SINAL} />
+        <path d={PLACEMENT_PIN_NOTCH_PATH} fill={PAPEL} />
+      </svg>
+    </Box>
+  );
 }
 
 // Enquadra o mapa nos problemas existentes assim que a lista carrega — sem
