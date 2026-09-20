@@ -14,9 +14,14 @@ import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useAuth } from '../auth/AuthContext';
+import { LINHA, SINAL, SINAL_CLARA, SINAL_ESCURA } from '../identityColors';
 import { ApiError } from '../services/apiClient';
 
 type Mode = 'login' | 'register';
+
+// Mesma família literal usada em Mapa.tsx/DetalheProblema.tsx — sem módulo
+// compartilhado de propósito (ver comentário equivalente nesses arquivos).
+const SERIF = "'Instrument Serif', serif";
 
 export function Login() {
   const { login, register } = useAuth();
@@ -68,12 +73,39 @@ export function Login() {
 
   return (
     <Container maxWidth="xs">
-      <Box sx={{ mt: 8 }}>
-        <Paper sx={{ p: 4 }}>
-          <Typography variant="h5" component="h1" gutterBottom textAlign="center">
-            Vicina
+      <Box sx={{ mt: { xs: 6, sm: 8 }, mb: 6 }}>
+        <Box sx={{ textAlign: 'center', mb: 3 }}>
+          {/* V sólido — path exato do AppShell/Home (variante principal
+              sobre Papel, ver docs/Vicina_Identidade_Visual.html, seção
+              SÍMBOLOS). Sozinho, sem o wordmark "Vicina" ao lado: o nome já
+              fica fixo na AppBar acima; aqui o símbolo é só o acento visual
+              da tela, e quem carrega a informação de contexto é o título
+              dinâmico logo abaixo. */}
+          <svg
+            width="36"
+            height="43"
+            viewBox="0 0 200 200"
+            aria-hidden="true"
+            focusable="false"
+            style={{ display: 'block', margin: '0 auto 12px' }}
+          >
+            <path
+              d="M46 40 L74 40 L100 130 L126 40 L154 40 L114 172 L86 172 Z"
+              fill={SINAL_ESCURA}
+              transform="translate(8,5)"
+            />
+            <path d="M46 40 L74 40 L100 130 L126 40 L154 40 L114 172 L82 172 Z" fill={SINAL} />
+            <path d="M46 40 L74 40 L100 130 L86 172 Z" fill={SINAL_CLARA} opacity={0.4} />
+          </svg>
+          <Typography component="h1" sx={{ fontFamily: SERIF, fontSize: '2rem', fontWeight: 400 }}>
+            {mode === 'login' ? 'Entrar' : 'Criar conta'}
           </Typography>
+        </Box>
 
+        {/* Borda sutil, sem sombra pesada — mesmo padrão "cartão" (16px, cor
+            LINHA) já usado no Detalhe do problema, em vez do Paper solto com
+            elevação default do MUI que havia aqui antes. */}
+        <Paper variant="outlined" sx={{ p: { xs: 3, sm: 5 }, borderRadius: '16px', borderColor: LINHA }}>
           <Tabs
             value={mode}
             onChange={handleModeChange}
@@ -85,7 +117,7 @@ export function Login() {
           </Tabs>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" variant="outlined" sx={{ mb: 2, borderRadius: '10px' }}>
               {error}
             </Alert>
           )}
