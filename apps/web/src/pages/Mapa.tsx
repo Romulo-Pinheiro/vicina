@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import HowToVoteOutlined from '@mui/icons-material/HowToVoteOutlined';
+import PlaceOutlined from '@mui/icons-material/PlaceOutlined';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
@@ -12,14 +13,11 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Fab from '@mui/material/Fab';
-import FormControl from '@mui/material/FormControl';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
+import GlobalStyles from '@mui/material/GlobalStyles';
 import Rating from '@mui/material/Rating';
-import Select, { type SelectChangeEvent } from '@mui/material/Select';
 import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { LatLngBounds, type LatLng, type Map as LeafletMap } from 'leaflet';
@@ -29,7 +27,18 @@ import '../leaflet-icon-fix';
 import { useAuth } from '../auth/AuthContext';
 import { getCategoryIcon } from '../categoryIcons';
 import { GeocoderControl } from '../components/GeocoderControl';
-import { ARDOSIA, ARDOSIA_PROFUNDA, PAPEL, SINAL, SINAL_ESCURA } from '../identityColors';
+import {
+  ARDOSIA,
+  ARDOSIA_PROFUNDA,
+  LINHA,
+  PAPEL,
+  SINAL,
+  SINAL_ESCURA,
+  SINAL_TINTA,
+  SINAL_TINTA_TEXTO,
+  TEXTO_SECUNDARIO,
+  TINTA,
+} from '../identityColors';
 import { FALLBACK_CENTER, FALLBACK_ZOOM, OSM_ATTRIBUTION, OSM_TILE_URL } from '../mapConfig';
 import { getPinIcon } from '../mapPinIcon';
 import { ApiError } from '../services/apiClient';
@@ -46,8 +55,29 @@ import {
 // usado só quando ainda não há nenhum problema cadastrado (sem pontos pra
 // calcular bounds via FitBounds).
 
+// Mesmas famílias tipográficas usadas em pages/PainelGestor.tsx — repetidas
+// aqui (não importadas de um módulo compartilhado) porque é assim que o
+// resto do app já referencia essas duas famílias fora do body padrão (ver
+// AppShell.tsx, Home.tsx): literal local, sem abstração nova.
+const SERIF = "'Instrument Serif', serif";
+const MONO = "'IBM Plex Mono', monospace";
+
+// Largura fixa do popup do pin (ver docs/Vicina_Identidade_Visual.html —
+// popup não é um card genérico, tem conteúdo estruturado igual um mini
+// cartão de problema).
+const POPUP_WIDTH = 272;
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('pt-BR');
+}
+
+// Chip de status com as cores oficiais (Sinalização=aberto, Ardósia=
+// resolvido) — mesmo par já usado na tabela do PainelGestor/Transparencia,
+// nunca as cores genéricas warning/success do MUI.
+function statusChipSx(status: 'ABERTO' | 'RESOLVIDO') {
+  return status === 'ABERTO'
+    ? { backgroundColor: SINAL_TINTA, color: SINAL_TINTA_TEXTO, fontWeight: 600 }
+    : { backgroundColor: ARDOSIA, color: PAPEL, fontWeight: 600 };
 }
 
 export function Mapa() {
@@ -250,6 +280,37 @@ export function Mapa() {
     // navegação via flexbox — este Box só precisa preencher o restante
     // (o <main> dela), não a viewport inteira. Ver components/AppShell.tsx.
     <Box sx={{ position: 'relative', height: '100%', width: '100%' }}>
+      {/* Sobrescreve o chrome default do Popup do Leaflet (fundo branco puro,
+          cantos de 12px, seta com sombra própria) pra usar Papel/Tinta e o
+          raio de 14px já usado em cartões do app (ver PainelGestor.tsx,
+          "Cantos de 10px em controles, 14px em cartões" na identidade
+          visual) — mesma técnica de GlobalStyles já usada em
+          GeocoderControl.tsx pra pele de controles do Leaflet. */}
+      <GlobalStyles
+        styles={{
+          '.leaflet-popup-content-wrapper': {
+            background: PAPEL,
+            color: TINTA,
+            borderRadius: 14,
+            boxShadow: '0 2px 6px rgba(32,34,31,0.15)',
+            padding: 0,
+          },
+          '.leaflet-popup-content': {
+            margin: 0,
+            fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
+          },
+          '.leaflet-popup-tip': {
+            background: PAPEL,
+            boxShadow: 'none',
+          },
+          '.leaflet-popup-close-button': {
+            color: TEXTO_SECUNDARIO,
+          },
+          '.leaflet-popup-close-button:hover': {
+            color: TINTA,
+          },
+        }}
+      />
       <MapContainer
         ref={mapRef}
         center={FALLBACK_CENTER}
@@ -268,32 +329,73 @@ export function Mapa() {
               position={[problem.latitude, problem.longitude]}
               icon={getPinIcon(problem.status, problem.category.name)}
             >
-              <Popup>
-                <Stack spacing={0.5} sx={{ minWidth: 200 }}>
-                  <Typography variant="subtitle2">{problem.title}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {problem.description}
+              <Popup minWidth={POPUP_WIDTH} maxWidth={POPUP_WIDTH}>
+                <Stack spacing={1} sx={{ p: 1.75 }}>
+                  {/* Chip de categoria: contorno neutro, ícone em Tinta — nunca
+                      um fundo colorido por categoria (cor já é reservada pro
+                      status, ver "Codificação visual do pin" no CLAUDE.md). */}
+                  <Chip
+                    icon={<CategoryIcon fontSize="small" />}
+                    label={problem.category.name}
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      alignSelf: 'flex-start',
+                      borderColor: LINHA,
+                      color: TINTA,
+                      '& .MuiChip-icon': { color: TINTA },
+                    }}
+                  />
+                  <Typography
+                    sx={{
+                      fontFamily: SERIF,
+                      fontSize: '1.2rem',
+                      lineHeight: 1.25,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {problem.title}
                   </Typography>
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
-                    <Chip
-                      icon={<CategoryIcon fontSize="small" />}
-                      label={problem.category.name}
-                      size="small"
-                    />
+                  <Stack direction="row" spacing={1} alignItems="center">
                     <Chip
                       label={problem.status === 'ABERTO' ? 'Aberto' : 'Resolvido'}
                       size="small"
-                      color={problem.status === 'ABERTO' ? 'warning' : 'success'}
+                      sx={statusChipSx(problem.status)}
                     />
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <HowToVoteOutlined sx={{ fontSize: 15, color: TEXTO_SECUNDARIO }} />
+                      <Typography variant="caption" color="text.secondary">
+                        {problem._count.votes} voto(s)
+                      </Typography>
+                    </Stack>
                   </Stack>
-                  <Typography variant="caption" color="text.secondary">
-                    {problem._count.votes} voto(s) · {problem._count.comments} comentário(s)
+                  {problem.isAnonymous && (
+                    <Typography variant="caption" color="text.secondary">
+                      Publicado por cidadão anônimo
+                    </Typography>
+                  )}
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 1,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {problem.description}
                   </Typography>
                   <Button
                     component={RouterLink}
                     to={`/problemas/${problem.id}`}
+                    variant="contained"
                     size="small"
-                    sx={{ alignSelf: 'flex-start', px: 0 }}
+                    fullWidth
+                    sx={{ mt: 0.5 }}
                   >
                     Ver detalhes
                   </Button>
@@ -378,11 +480,32 @@ export function Mapa() {
         slotProps={{ paper: { sx: { mt: { xs: 4, sm: 0 } } } }}
       >
         <Box component="form" onSubmit={handleSubmit} noValidate>
-          <DialogTitle>Registrar problema</DialogTitle>
+          <DialogTitle sx={{ fontFamily: SERIF, fontSize: '1.6rem', fontWeight: 400 }}>
+            Registrar problema
+          </DialogTitle>
           <DialogContent>
-            <DialogContentText sx={{ mb: 2 }}>
+            <DialogContentText sx={{ mb: 1.5 }}>
               Descreva o problema observado neste local.
             </DialogContentText>
+
+            {/* Localização já definida pelo modo de posicionamento (ver
+                handleConfirmPlacing acima) — reforça que a posição não
+                precisa mais ser tocada aqui, só o resto do formulário. */}
+            {pendingLocation && (
+              <Chip
+                icon={<PlaceOutlined fontSize="small" />}
+                label={`${pendingLocation.lat.toFixed(5)}, ${pendingLocation.lng.toFixed(5)}`}
+                size="small"
+                variant="outlined"
+                sx={{
+                  mb: 2,
+                  fontFamily: MONO,
+                  borderColor: LINHA,
+                  color: TINTA,
+                  '& .MuiChip-icon': { color: TEXTO_SECUNDARIO },
+                }}
+              />
+            )}
 
             {formError && (
               <Alert severity="error" sx={{ mb: 2 }}>
@@ -410,47 +533,65 @@ export function Mapa() {
               onChange={(event) => setDescription(event.target.value)}
               disabled={submitting}
             />
-            <FormControl fullWidth required margin="dense" disabled={submitting}>
-              <InputLabel id="categoria-label">Categoria</InputLabel>
-              <Select
-                labelId="categoria-label"
-                label="Categoria"
-                value={categoryId}
-                onChange={(event: SelectChangeEvent) => setCategoryId(event.target.value)}
-              >
-                {categories.map((category) => (
-                  <MenuItem key={category.id} value={category.id}>
-                    {category.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Typography variant="body2" sx={{ mt: 2, mb: 1, fontWeight: 500 }}>
+              Categoria
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {categories.map((category) => {
+                const CategoryOptionIcon = getCategoryIcon(category.name);
+                const selected = categoryId === category.id;
+                return (
+                  <Chip
+                    key={category.id}
+                    icon={<CategoryOptionIcon fontSize="small" />}
+                    label={category.name}
+                    onClick={() => setCategoryId(category.id)}
+                    disabled={submitting}
+                    // Sempre "outlined": o variant "filled" do MUI define
+                    // background via uma classe composta
+                    // (.MuiChip-filled.MuiChip-filledDefault, especificidade
+                    // 0,2,0) que vence a classe única gerada pelo sx abaixo
+                    // (0,1,0) — o destaque do selecionado só funciona de
+                    // forma confiável competindo dentro do variant outlined,
+                    // que não declara background próprio pra brigar.
+                    variant="outlined"
+                    sx={{
+                      borderColor: selected ? SINAL : LINHA,
+                      backgroundColor: selected ? SINAL_TINTA : 'transparent',
+                      color: selected ? SINAL_TINTA_TEXTO : TINTA,
+                      fontWeight: selected ? 600 : 400,
+                      '& .MuiChip-icon': { color: selected ? SINAL_TINTA_TEXTO : TINTA },
+                    }}
+                  />
+                );
+              })}
+            </Box>
 
-            <FormControlLabel
-              sx={{ mt: 1, alignItems: 'flex-start' }}
-              disabled={submitting}
-              control={
-                <Checkbox
-                  checked={isAnonymous}
-                  onChange={(event) => setIsAnonymous(event.target.checked)}
-                  sx={{ pt: 0 }}
-                />
-              }
-              label={
-                <Stack sx={{ mt: '9px' }}>
-                  <Typography variant="body2">Publicar como anônimo</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Seu nome não aparecerá para outras pessoas — a escolha não pode ser mudada depois.
-                  </Typography>
-                </Stack>
-              }
-            />
+            <Stack direction="row" spacing={1.5} alignItems="flex-start" sx={{ mt: 2.5 }}>
+              <Switch
+                checked={isAnonymous}
+                onChange={(event) => setIsAnonymous(event.target.checked)}
+                disabled={submitting}
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': { color: SINAL },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                    backgroundColor: SINAL,
+                  },
+                }}
+              />
+              <Stack sx={{ mt: '9px' }}>
+                <Typography variant="body2">Publicar como anônimo</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Seu nome não aparecerá para outras pessoas — a escolha não pode ser mudada depois.
+                </Typography>
+              </Stack>
+            </Stack>
           </DialogContent>
           <DialogActions>
             <Button onClick={closeDialog} disabled={submitting}>
               Cancelar
             </Button>
-            <Button type="submit" variant="contained" disabled={submitting}>
+            <Button type="submit" variant="contained" disabled={submitting || !categoryId}>
               {submitting ? <CircularProgress size={20} color="inherit" /> : 'Registrar'}
             </Button>
           </DialogActions>
