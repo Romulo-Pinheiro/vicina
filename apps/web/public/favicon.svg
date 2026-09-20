@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- V sólido — a marca (ver docs/Vicina_Identidade_Visual.html, seção
+       SÍMBOLOS). Path exato, variante principal sobre fundo claro: sombra
+       Sinalização escura + corpo Sinalização + lavagem Sinalização clara.
+       Fundo transparente de propósito — o favicon precisa funcionar tanto
+       em abas claras quanto escuras do navegador. -->
+  <path d="M46 40 L74 40 L100 130 L126 40 L154 40 L114 172 L86 172 Z" fill="#C44F22" transform="translate(8,5)"/>
+  <path d="M46 40 L74 40 L100 130 L126 40 L154 40 L114 172 L82 172 Z" fill="#FF6B35"/>
+  <path d="M46 40 L74 40 L100 130 L86 172 Z" fill="#FF8F63" opacity=".4"/>
+</svg>
