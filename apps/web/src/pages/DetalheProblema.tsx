@@ -12,6 +12,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
+import Paper from '@mui/material/Paper';
 import Rating from '@mui/material/Rating';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
@@ -273,201 +274,209 @@ export function DetalheProblema() {
   const CategoryIcon = getCategoryIcon(problem.category.name);
 
   return (
-    <Container maxWidth="sm">
+    // "md" (900px), não "sm" (600px): num monitor comum o conteúdo ficava
+    // uma coluna estreita de texto boiando num mar de Papel vazio dos dois
+    // lados. O Paper com borda abaixo (mesmo padrão "cartão" de 16px já
+    // usado em PainelGestor/Transparencia e Login.tsx, sem sombra — ver
+    // "sombra só onde existe elevação real" na identidade visual) dá um
+    // limite visual real ao conteúdo em vez de só alargar o texto.
+    <Container maxWidth="md">
       <Box sx={{ mt: 4, mb: 6 }}>
         <Button component={RouterLink} to="/mapa" size="small" sx={{ mb: 2 }}>
           ‹ Voltar ao mapa
         </Button>
 
-        <Typography
-          component="h1"
-          sx={{ fontFamily: SERIF, fontSize: { xs: '2rem', sm: '2.5rem' }, fontWeight: 400, lineHeight: 1.15, mb: 1.5 }}
-        >
-          {problem.title}
-        </Typography>
-
-        <Stack direction="row" spacing={1} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
-          <Chip
-            icon={<CategoryIcon fontSize="small" />}
-            label={problem.category.name}
-            size="small"
-            variant="outlined"
-            sx={{ borderColor: LINHA, color: TINTA, '& .MuiChip-icon': { color: TINTA } }}
-          />
-          <Chip
-            label={problem.status === 'ABERTO' ? 'Aberto' : 'Resolvido'}
-            size="small"
-            sx={statusChipSx(problem.status)}
-          />
-        </Stack>
-
-        <SectionLabel>Descrição</SectionLabel>
-        <Typography variant="body1" sx={{ mb: 2 }}>
-          {problem.description}
-        </Typography>
-
-        <Typography variant="body2" color="text.secondary">
-          Registrado por <strong>{problem.author.name}</strong> em{' '}
-          {formatDate(problem.createdAt)}
-        </Typography>
-
-        {problem.status === 'RESOLVIDO' && problem.resolvedAt && (
-          <Box sx={{ mt: 3 }}>
-            <SectionLabel>Resolução</SectionLabel>
-            {/* Agrupa tudo que hoje ficava solto (data, mensagem de quem
-                resolveu, estrelas, retorno do autor) num único bloco com
-                leve tingimento em Ardósia — mesmo tratamento já usado nos
-                tiles "resolvidos" do PainelGestor/Transparencia (ARDOSIA_TINTA
-                de fundo, ARDOSIA no texto). */}
-            <Box sx={{ backgroundColor: ARDOSIA_TINTA, borderRadius: '14px', p: 2.25 }}>
-              <Typography variant="body2" sx={{ color: ARDOSIA, fontWeight: 600 }}>
-                Resolvido em {formatDate(problem.resolvedAt)}
-              </Typography>
-              {/* Mensagem de quem resolveu (autor ou gestor) — ver
-                  CLAUDE.md, "mensagem opcional... ao resolver". */}
-              {problem.resolutionNote && (
-                <Typography variant="body2" sx={{ mt: 1, color: TINTA }}>
-                  {problem.resolutionNote}
-                </Typography>
-              )}
-              {problem.resolutionRating && (
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1.5 }}>
-                  <Typography variant="body2" sx={{ color: ARDOSIA }}>
-                    Avaliação do autor:
-                  </Typography>
-                  <Rating value={problem.resolutionRating} readOnly size="small" />
-                </Stack>
-              )}
-              {/* Comentário opcional do autor ao avaliar (estilo Uber/iFood,
-                  ver Mapa.tsx) — pra qualquer visitante. Diferente da
-                  resolutionNote acima: aqui é o retorno de quem avaliou
-                  depois, não a mensagem de quem resolveu. */}
-              {problem.resolutionFeedback && (
-                <Typography variant="body2" sx={{ mt: 1, color: ARDOSIA, fontStyle: 'italic' }}>
-                  "{problem.resolutionFeedback}"
-                </Typography>
-              )}
-            </Box>
-          </Box>
-        )}
-
-        <Divider sx={{ my: 3 }} />
-
-        {voteError && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setVoteError(null)}>
-            {voteError}
-          </Alert>
-        )}
-        {resolveError && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setResolveError(null)}>
-            {resolveError}
-          </Alert>
-        )}
-
-        {/* minHeight 44px — padrão de acessibilidade de área de toque mínima
-            pra ação primária em mobile; o Button "medium" default do MUI
-            fica em ~36px, curto demais pro dedo. */}
-        <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap', rowGap: 1 }}>
-          {/* Destaque em Sinalização (contained) quando o usuário JÁ votou —
-              o voto em si é o resultado a reforçar visualmente, não o
-              convite pra votar; sem voto ainda, o botão fica outlined. */}
-          <Button
-            variant={voted ? 'contained' : 'outlined'}
-            onClick={() => void handleToggleVote()}
-            disabled={voteSubmitting}
-            sx={{ minHeight: 44 }}
+        <Paper variant="outlined" sx={{ p: { xs: 3, sm: 5 }, borderRadius: '16px', borderColor: LINHA }}>
+          <Typography
+            component="h1"
+            sx={{ fontFamily: SERIF, fontSize: { xs: '2rem', sm: '2.5rem' }, fontWeight: 400, lineHeight: 1.15, mb: 1.5 }}
           >
-            {voteSubmitting ? (
-              <CircularProgress size={20} color="inherit" />
-            ) : voted ? (
-              `Remover voto (${problem._count.votes})`
-            ) : (
-              `Votar (${problem._count.votes})`
-            )}
-          </Button>
+            {problem.title}
+          </Typography>
 
-          {canResolve && (
-            <Button
+          <Stack direction="row" spacing={1} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
+            <Chip
+              icon={<CategoryIcon fontSize="small" />}
+              label={problem.category.name}
+              size="small"
               variant="outlined"
-              color="success"
-              onClick={() => setResolveDialogOpen(true)}
+              sx={{ borderColor: LINHA, color: TINTA, '& .MuiChip-icon': { color: TINTA } }}
+            />
+            <Chip
+              label={problem.status === 'ABERTO' ? 'Aberto' : 'Resolvido'}
+              size="small"
+              sx={statusChipSx(problem.status)}
+            />
+          </Stack>
+
+          <SectionLabel>Descrição</SectionLabel>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            {problem.description}
+          </Typography>
+
+          <Typography variant="body2" color="text.secondary">
+            Registrado por <strong>{problem.author.name}</strong> em{' '}
+            {formatDate(problem.createdAt)}
+          </Typography>
+
+          {problem.status === 'RESOLVIDO' && problem.resolvedAt && (
+            <Box sx={{ mt: 3 }}>
+              <SectionLabel>Resolução</SectionLabel>
+              {/* Agrupa tudo que hoje ficava solto (data, mensagem de quem
+                  resolveu, estrelas, retorno do autor) num único bloco com
+                  leve tingimento em Ardósia — mesmo tratamento já usado nos
+                  tiles "resolvidos" do PainelGestor/Transparencia (ARDOSIA_TINTA
+                  de fundo, ARDOSIA no texto). */}
+              <Box sx={{ backgroundColor: ARDOSIA_TINTA, borderRadius: '14px', p: 2.25 }}>
+                <Typography variant="body2" sx={{ color: ARDOSIA, fontWeight: 600 }}>
+                  Resolvido em {formatDate(problem.resolvedAt)}
+                </Typography>
+                {/* Mensagem de quem resolveu (autor ou gestor) — ver
+                    CLAUDE.md, "mensagem opcional... ao resolver". */}
+                {problem.resolutionNote && (
+                  <Typography variant="body2" sx={{ mt: 1, color: TINTA }}>
+                    {problem.resolutionNote}
+                  </Typography>
+                )}
+                {problem.resolutionRating && (
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1.5 }}>
+                    <Typography variant="body2" sx={{ color: ARDOSIA }}>
+                      Avaliação do autor:
+                    </Typography>
+                    <Rating value={problem.resolutionRating} readOnly size="small" />
+                  </Stack>
+                )}
+                {/* Comentário opcional do autor ao avaliar (estilo Uber/iFood,
+                    ver Mapa.tsx) — pra qualquer visitante. Diferente da
+                    resolutionNote acima: aqui é o retorno de quem avaliou
+                    depois, não a mensagem de quem resolveu. */}
+                {problem.resolutionFeedback && (
+                  <Typography variant="body2" sx={{ mt: 1, color: ARDOSIA, fontStyle: 'italic' }}>
+                    "{problem.resolutionFeedback}"
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+          )}
+
+          <Divider sx={{ my: 3 }} />
+
+          {voteError && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setVoteError(null)}>
+              {voteError}
+            </Alert>
+          )}
+          {resolveError && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setResolveError(null)}>
+              {resolveError}
+            </Alert>
+          )}
+
+          {/* minHeight 44px — padrão de acessibilidade de área de toque mínima
+              pra ação primária em mobile; o Button "medium" default do MUI
+              fica em ~36px, curto demais pro dedo. */}
+          <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap', rowGap: 1 }}>
+            {/* Destaque em Sinalização (contained) quando o usuário JÁ votou —
+                o voto em si é o resultado a reforçar visualmente, não o
+                convite pra votar; sem voto ainda, o botão fica outlined. */}
+            <Button
+              variant={voted ? 'contained' : 'outlined'}
+              onClick={() => void handleToggleVote()}
+              disabled={voteSubmitting}
               sx={{ minHeight: 44 }}
             >
-              Marcar como resolvido
-            </Button>
-          )}
-        </Stack>
-
-        <Divider sx={{ my: 3 }} />
-
-        <SectionLabel>Comentários ({comments.length})</SectionLabel>
-
-        <Stack spacing={2} sx={{ mb: 3 }}>
-          {comments.map((comment) => (
-            <Box key={comment.id}>
-              <Typography sx={{ fontFamily: MONO, fontSize: '0.75rem', color: TEXTO_SECUNDARIO }}>
-                {comment.user.name} · {formatDate(comment.createdAt)}
-              </Typography>
-              <Typography variant="body2" sx={{ mt: 0.5 }}>
-                {comment.text}
-              </Typography>
-              {user?.id === comment.user.id && (
-                <Button
-                  size="small"
-                  color="error"
-                  onClick={() => void handleDeleteComment(comment.id)}
-                  sx={{ mt: 0.5, px: 0 }}
-                >
-                  Excluir
-                </Button>
-              )}
-            </Box>
-          ))}
-          {comments.length === 0 && (
-            <Typography variant="body2" color="text.secondary">
-              Nenhum comentário ainda.
-            </Typography>
-          )}
-        </Stack>
-
-        {user ? (
-          <Box component="form" onSubmit={handleCommentSubmit}>
-            {commentError && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {commentError}
-              </Alert>
-            )}
-            <TextField
-              label="Escreva um comentário"
-              fullWidth
-              required
-              multiline
-              minRows={2}
-              value={commentText}
-              onChange={(event) => setCommentText(event.target.value)}
-              disabled={commentSubmitting}
-            />
-            <Button
-              type="submit"
-              variant="contained"
-              sx={{ mt: 1, minHeight: 44 }}
-              disabled={commentSubmitting}
-            >
-              {commentSubmitting ? (
+              {voteSubmitting ? (
                 <CircularProgress size={20} color="inherit" />
+              ) : voted ? (
+                `Remover voto (${problem._count.votes})`
               ) : (
-                'Comentar'
+                `Votar (${problem._count.votes})`
               )}
             </Button>
-          </Box>
-        ) : (
-          <Alert severity="info">
-            <Button component={RouterLink} to="/login" size="small">
-              Entre
-            </Button>{' '}
-            para comentar.
-          </Alert>
-        )}
+
+            {canResolve && (
+              <Button
+                variant="outlined"
+                color="success"
+                onClick={() => setResolveDialogOpen(true)}
+                sx={{ minHeight: 44 }}
+              >
+                Marcar como resolvido
+              </Button>
+            )}
+          </Stack>
+
+          <Divider sx={{ my: 3 }} />
+
+          <SectionLabel>Comentários ({comments.length})</SectionLabel>
+
+          <Stack spacing={2} sx={{ mb: 3 }}>
+            {comments.map((comment) => (
+              <Box key={comment.id}>
+                <Typography sx={{ fontFamily: MONO, fontSize: '0.75rem', color: TEXTO_SECUNDARIO }}>
+                  {comment.user.name} · {formatDate(comment.createdAt)}
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                  {comment.text}
+                </Typography>
+                {user?.id === comment.user.id && (
+                  <Button
+                    size="small"
+                    color="error"
+                    onClick={() => void handleDeleteComment(comment.id)}
+                    sx={{ mt: 0.5, px: 0 }}
+                  >
+                    Excluir
+                  </Button>
+                )}
+              </Box>
+            ))}
+            {comments.length === 0 && (
+              <Typography variant="body2" color="text.secondary">
+                Nenhum comentário ainda.
+              </Typography>
+            )}
+          </Stack>
+
+          {user ? (
+            <Box component="form" onSubmit={handleCommentSubmit}>
+              {commentError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {commentError}
+                </Alert>
+              )}
+              <TextField
+                label="Escreva um comentário"
+                fullWidth
+                required
+                multiline
+                minRows={2}
+                value={commentText}
+                onChange={(event) => setCommentText(event.target.value)}
+                disabled={commentSubmitting}
+              />
+              <Button
+                type="submit"
+                variant="contained"
+                sx={{ mt: 1, minHeight: 44 }}
+                disabled={commentSubmitting}
+              >
+                {commentSubmitting ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  'Comentar'
+                )}
+              </Button>
+            </Box>
+          ) : (
+            <Alert severity="info">
+              <Button component={RouterLink} to="/login" size="small">
+                Entre
+              </Button>{' '}
+              para comentar.
+            </Alert>
+          )}
+        </Paper>
       </Box>
 
       <Dialog open={resolveDialogOpen} onClose={closeResolveDialog} fullWidth maxWidth="xs">
