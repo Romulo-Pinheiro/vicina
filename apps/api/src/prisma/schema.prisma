@@ -98,6 +98,11 @@ model Problem {
   // ver CLAUDE.md, "Avaliação assíncrona... e mensagem do gestor ao
   // resolver". Exibida na página de detalhe pra qualquer visitante.
   resolutionNote String? @map("resolution_note")
+  // Comentário opcional do autor original ao avaliar a resolução (estilo
+  // Uber/iFood: nota + comentário livre), via PATCH /problems/:id/avaliar.
+  // Diferente de resolutionNote: essa é a mensagem de quem RESOLVEU, esta é
+  // o retorno de quem AVALIA depois — dois momentos e autores diferentes.
+  resolutionFeedback String? @map("resolution_feedback")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

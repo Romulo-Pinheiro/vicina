@@ -27,6 +27,7 @@ const PROBLEM_SELECT = {
   resolvedAt: true,
   resolutionRating: true,
   resolutionNote: true,
+  resolutionFeedback: true,
   createdAt: true,
   updatedAt: true,
   category: { select: { id: true, name: true } },
@@ -243,11 +244,14 @@ export class ProblemsService {
 
     const updated = await this.prisma.problem.update({
       where: { id },
-      data: { resolutionRating: dto.resolutionRating },
+      data: {
+        resolutionRating: dto.resolutionRating,
+        resolutionFeedback: dto.resolutionFeedback ?? null,
+      },
       select: PROBLEM_SELECT,
     });
     this.logger.log(
-      `Problema avaliado: ${id} (rating=${dto.resolutionRating}, autor=${userId})`,
+      `Problema avaliado: ${id} (rating=${dto.resolutionRating}, comentário=${dto.resolutionFeedback ? 'sim' : 'não'}, autor=${userId})`,
     );
     return maskAnonymousAuthor(updated);
   }
