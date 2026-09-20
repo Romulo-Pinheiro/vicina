@@ -52,6 +52,10 @@ import {
 // usado só quando ainda não há nenhum problema cadastrado (sem pontos pra
 // calcular bounds via FitBounds).
 
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('pt-BR');
+}
+
 export function Mapa() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -81,6 +85,9 @@ export function Mapa() {
   // próximo login pergunta de novo (ver GET /problems/pendentes-avaliacao).
   const [pendingEvaluation, setPendingEvaluation] = useState<Problem | null>(null);
   const [evaluationRating, setEvaluationRating] = useState<number | null>(null);
+  // Comentário opcional, estilo Uber/iFood (nota + relato livre) — vai pra
+  // Problem.resolutionFeedback, separado da resolutionNote de quem resolveu.
+  const [evaluationFeedback, setEvaluationFeedback] = useState('');
   const [evaluationSubmitting, setEvaluationSubmitting] = useState(false);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
 
@@ -131,6 +138,7 @@ export function Mapa() {
     // CLAUDE.md: não implementar dispensa permanente).
     setPendingEvaluation(null);
     setEvaluationRating(null);
+    setEvaluationFeedback('');
     setEvaluationError(null);
   }
 
@@ -141,7 +149,10 @@ export function Mapa() {
     setEvaluationError(null);
     setEvaluationSubmitting(true);
     try {
-      await avaliarProblem(pendingEvaluation.id, { resolutionRating: evaluationRating });
+      await avaliarProblem(pendingEvaluation.id, {
+        resolutionRating: evaluationRating,
+        resolutionFeedback: evaluationFeedback.trim() ? evaluationFeedback.trim() : undefined,
+      });
       dismissEvaluation();
     } catch (error) {
       setEvaluationError(
@@ -200,6 +211,10 @@ export function Mapa() {
       </Box>
     );
   }
+
+  const PendingEvaluationCategoryIcon = pendingEvaluation
+    ? getCategoryIcon(pendingEvaluation.category.name)
+    : null;
 
   if (!problems) {
     return (
@@ -421,22 +436,68 @@ export function Mapa() {
 
       {/* Avaliação assíncrona (ver useEffect acima) — sem onClose ligado a
           nada: só fecha pelos botões explícitos ("Agora não" ou avaliar),
-          não clicando fora nem com Esc, pra não passar batido sem querer. */}
+          não clicando fora nem com Esc, pra não passar batido sem querer.
+          Mais contexto que uma versão anterior só com o título (categoria,
+          quando foi resolvido, e a mensagem de quem resolveu, se houver) —
+          o usuário pode não lembrar de cabeça qual problema é esse só pelo
+          título, e o texto de quem resolveu ajuda a avaliar de fato. */}
       <Dialog open={pendingEvaluation !== null} maxWidth="xs" fullWidth>
         <DialogTitle>Como foi a resolução?</DialogTitle>
         <DialogContent>
-          <DialogContentText sx={{ mb: 2 }}>
-            {pendingEvaluation?.title}
-          </DialogContentText>
+          {pendingEvaluation && (
+            <>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                <Chip
+                  icon={
+                    PendingEvaluationCategoryIcon ? (
+                      <PendingEvaluationCategoryIcon fontSize="small" />
+                    ) : undefined
+                  }
+                  label={pendingEvaluation.category.name}
+                  size="small"
+                />
+                {pendingEvaluation.resolvedAt && (
+                  <Typography variant="caption" color="text.secondary">
+                    Resolvido em {formatDate(pendingEvaluation.resolvedAt)}
+                  </Typography>
+                )}
+              </Stack>
+              <DialogContentText sx={{ fontWeight: 500, color: 'text.primary' }}>
+                {pendingEvaluation.title}
+              </DialogContentText>
+              {pendingEvaluation.resolutionNote && (
+                <Alert severity="success" variant="outlined" sx={{ mt: 1.5 }}>
+                  {pendingEvaluation.resolutionNote}
+                </Alert>
+              )}
+            </>
+          )}
+
           {evaluationError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mt: 2 }}>
               {evaluationError}
             </Alert>
           )}
+
+          <Typography variant="body2" sx={{ mt: 2.5, mb: 0.5 }}>
+            Quantas estrelas você dá pra essa resolução?
+          </Typography>
           <Rating
             value={evaluationRating}
             onChange={(_event, newValue) => setEvaluationRating(newValue)}
             size="large"
+          />
+
+          <TextField
+            label="Quer contar mais? (opcional)"
+            placeholder="O que funcionou, o que poderia ter sido melhor..."
+            fullWidth
+            multiline
+            minRows={2}
+            sx={{ mt: 2 }}
+            value={evaluationFeedback}
+            onChange={(event) => setEvaluationFeedback(event.target.value)}
+            disabled={evaluationSubmitting}
           />
         </DialogContent>
         <DialogActions>

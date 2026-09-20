@@ -266,6 +266,15 @@ export function DetalheProblema() {
                 <Rating value={problem.resolutionRating} readOnly size="small" />
               </Stack>
             )}
+            {/* Comentário opcional do autor ao avaliar (estilo Uber/iFood,
+                ver Mapa.tsx) — pra qualquer visitante, igual à resolutionNote
+                abaixo. Diferente dela: aqui é o retorno de quem avaliou
+                depois, não a mensagem de quem resolveu. */}
+            {problem.resolutionFeedback && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontStyle: 'italic' }}>
+                "{problem.resolutionFeedback}"
+              </Typography>
+            )}
             {/* Mensagem de quem resolveu (autor ou gestor), pra qualquer
                 visitante — ver CLAUDE.md, "mensagem opcional... ao
                 resolver". */}

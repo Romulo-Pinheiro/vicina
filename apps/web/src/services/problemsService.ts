@@ -16,6 +16,10 @@ export interface Problem {
   // Mensagem opcional de quem resolveu (autor ou gestor) — ver CLAUDE.md,
   // "Avaliação assíncrona... e mensagem do gestor ao resolver".
   resolutionNote: string | null;
+  // Comentário opcional do autor ao avaliar a resolução (estilo Uber/iFood)
+  // — diferente de resolutionNote: é o retorno de quem AVALIA depois, não
+  // a mensagem de quem resolveu.
+  resolutionFeedback: string | null;
   createdAt: string;
   updatedAt: string;
   category: { id: string; name: string };
@@ -72,6 +76,7 @@ export function resolveProblem(
 
 export interface AvaliarProblemInput {
   resolutionRating: number;
+  resolutionFeedback?: string;
 }
 
 // Avaliação assíncrona (ver CLAUDE.md) — só o autor original, só depois de
