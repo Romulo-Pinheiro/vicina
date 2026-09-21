@@ -470,6 +470,20 @@ function CtaFinal() {
             Criar conta
           </Button>
         </Stack>
+
+        {/* Referência discreta ao vínculo acadêmico do projeto — mesmo
+            tratamento tipográfico da legenda de crédito do OpenStreetMap no
+            Hero (mono, pequena, cor apagada), não um selo de destaque. */}
+        <Typography
+          sx={{
+            mt: 6,
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: '0.7rem',
+            color: 'rgba(250,250,248,.5)',
+          }}
+        >
+          TCC — Engenharia de Software, Centro Universitário Nobre
+        </Typography>
       </Container>
     </Box>
   );
